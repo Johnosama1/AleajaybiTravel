@@ -1,13 +1,16 @@
 export function getSaturdayOfWeek(date: Date): Date {
   const d = new Date(date);
   const day = d.getDay();
-  const diff = d.getDate() - day - 1; // 0 is Sunday. If today is Saturday (6), diff is d.getDate() - 6 - 1 = d.getDate() - 7
-  // Let's adjust: In Egypt, week starts on Saturday. 
-  // JS getDay(): 0 = Sunday, 1 = Monday, 2 = Tuesday, 3 = Wednesday, 4 = Thursday, 5 = Friday, 6 = Saturday.
-  // We want to find the most recent Saturday.
+  // JS: 0=Sun .. 6=Sat. Egypt week starts Saturday. Find most recent Saturday.
   const diffToSaturday = day === 6 ? 0 : day + 1;
   d.setDate(d.getDate() - diffToSaturday);
   d.setHours(0, 0, 0, 0);
+  return d;
+}
+
+export function addDays(date: Date, days: number): Date {
+  const d = new Date(date);
+  d.setDate(d.getDate() + days);
   return d;
 }
 
@@ -25,9 +28,28 @@ export const ARABIC_DAYS = [
   "الثلاثاء",
   "الأربعاء",
   "الخميس",
-  "الجمعة"
+  "الجمعة",
 ];
 
 export function formatHour(hour: number): string {
   return `${String(hour).padStart(2, "0")}:00`;
+}
+
+export function formatArabicDate(date: Date): string {
+  // e.g. "السبت 2 مايو 2026"
+  const months = [
+    "يناير",
+    "فبراير",
+    "مارس",
+    "أبريل",
+    "مايو",
+    "يونيو",
+    "يوليو",
+    "أغسطس",
+    "سبتمبر",
+    "أكتوبر",
+    "نوفمبر",
+    "ديسمبر",
+  ];
+  return `${date.getDate()} ${months[date.getMonth()]} ${date.getFullYear()}`;
 }

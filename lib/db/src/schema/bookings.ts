@@ -12,6 +12,7 @@ export const bookingsTable = pgTable(
   "bookings",
   {
     id: serial("id").primaryKey(),
+    carId: integer("car_id").notNull(),
     name: text("name").notNull(),
     phone: text("phone").notNull(),
     weekStart: date("week_start").notNull(),
@@ -24,6 +25,7 @@ export const bookingsTable = pgTable(
   },
   (table) => ({
     uniqueSlot: uniqueIndex("bookings_unique_slot_idx").on(
+      table.carId,
       table.weekStart,
       table.dayOfWeek,
       table.hour,

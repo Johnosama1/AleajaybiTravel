@@ -1,21 +1,24 @@
 import { Router, type IRouter } from "express";
 import { and, asc, eq, sql } from "drizzle-orm";
 import { z } from "zod";
-import { db, bookingsTable } from "@workspace/db";
+import { db, bookingsTable, carsTable } from "@workspace/db";
 import {
   ListBookingsResponse,
   GetBookingStatsResponse,
 } from "@workspace/api-zod";
+import { DAYS_MANUAL, DAYS_AUTOMATIC, HOURS } from "./schedule.js";
 
 const dateString = z
   .string()
   .regex(/^\d{4}-\d{2}-\d{2}$/, "weekStart must be YYYY-MM-DD");
 
 const availabilityQuery = z.object({
+  carId: z.coerce.number().int().positive(),
   weekStart: dateString,
 });
 
 const createBookingBody = z.object({
+  carId: z.number().int().positive(),
   name: z.string().min(2).max(80),
   phone: z.string().min(6).max(20),
   weekStart: dateString,
@@ -49,16 +52,22 @@ router.get("/availability", (req, res, next) => {
       });
       return;
     }
-    const weekStartStr = parsed.data.weekStart;
+    const { weekStart, carId } = parsed.data;
     const rows = await db
       .select({
         dayOfWeek: bookingsTable.dayOfWeek,
         hour: bookingsTable.hour,
       })
       .from(bookingsTable)
-      .where(eq(bookingsTable.weekStart, weekStartStr));
+      .where(
+        and(
+          eq(bookingsTable.weekStart, weekStart),
+          eq(bookingsTable.carId, carId),
+        ),
+      );
     res.json({
-      weekStart: weekStartStr,
+      carId,
+      weekStart,
       bookedSlots: rows.map((r) => `${r.dayOfWeek}-${r.hour}`),
     });
   })().catch(next);
@@ -69,10 +78,15 @@ router.get("/bookings", (_req, res, next) => {
     const rows = await db
       .select()
       .from(bookingsTable)
-      .orderBy(asc(bookingsTable.weekStart), asc(bookingsTable.dayOfWeek), asc(bookingsTable.hour));
+      .orderBy(
+        asc(bookingsTable.weekStart),
+        asc(bookingsTable.dayOfWeek),
+        asc(bookingsTable.hour),
+      );
     const data = ListBookingsResponse.parse(
       rows.map((r) => ({
         id: r.id,
+        carId: r.carId,
         name: r.name,
         phone: r.phone,
         weekStart: r.weekStart,
@@ -97,14 +111,48 @@ router.post("/bookings", (req, res, next) => {
       return;
     }
     const body = parsed.data;
-    const weekStartStr = body.weekStart;
+
+    // Validate car exists and the day matches its transmission
+    const [car] = await db
+      .select({ transmission: carsTable.transmission })
+      .from(carsTable)
+      .where(eq(carsTable.id, body.carId))
+      .limit(1);
+
+    if (!car) {
+      res.status(400).json({
+        error: "CAR_NOT_FOUND",
+        message: "السيارة المختارة غير موجودة.",
+      });
+      return;
+    }
+
+    const allowedDays =
+      car.transmission === "automatic" ? DAYS_AUTOMATIC : DAYS_MANUAL;
+
+    if (!allowedDays.includes(body.dayOfWeek)) {
+      res.status(400).json({
+        error: "DAY_NOT_AVAILABLE",
+        message: "هذا اليوم غير متاح لنوع السيارة المختار.",
+      });
+      return;
+    }
+
+    if (!HOURS.includes(body.hour)) {
+      res.status(400).json({
+        error: "HOUR_NOT_AVAILABLE",
+        message: "هذه الساعة خارج مواعيد العمل.",
+      });
+      return;
+    }
 
     const existing = await db
       .select({ id: bookingsTable.id })
       .from(bookingsTable)
       .where(
         and(
-          eq(bookingsTable.weekStart, weekStartStr),
+          eq(bookingsTable.carId, body.carId),
+          eq(bookingsTable.weekStart, body.weekStart),
           eq(bookingsTable.dayOfWeek, body.dayOfWeek),
           eq(bookingsTable.hour, body.hour),
         ),
@@ -122,9 +170,10 @@ router.post("/bookings", (req, res, next) => {
       const [created] = await db
         .insert(bookingsTable)
         .values({
+          carId: body.carId,
           name: body.name,
           phone: body.phone,
-          weekStart: weekStartStr,
+          weekStart: body.weekStart,
           dayOfWeek: body.dayOfWeek,
           hour: body.hour,
           notes: body.notes ?? null,
@@ -133,6 +182,7 @@ router.post("/bookings", (req, res, next) => {
 
       res.status(201).json({
         id: created.id,
+        carId: created.carId,
         name: created.name,
         phone: created.phone,
         weekStart: created.weekStart,

@@ -3,7 +3,7 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: Aleajayhi driving school API
+  description: Aleajaybi Travel driving school API
 servers:
   - url: /api
     description: Base API path
@@ -36,7 +36,7 @@ paths:
       operationId: getSchedule
       tags: [schedule]
       summary: Get the weekly operating schedule
-      description: Returns the days of the week and hours of the day the school operates
+      description: Returns the days of the week (per transmission) and hours of the day the school operates
       responses:
         "200":
           description: Weekly schedule
@@ -49,9 +49,15 @@ paths:
     get:
       operationId: getAvailability
       tags: [bookings]
-      summary: Get availability for a specific week
-      description: Returns booked slot keys for the given week so the UI can lock them
+      summary: Get availability for a specific car and week
+      description: Returns booked slot keys for the given car and week so the UI can lock them
       parameters:
+        - in: query
+          name: carId
+          required: true
+          description: ID of the car to check availability for
+          schema:
+            type: integer
         - in: query
           name: weekStart
           required: true
@@ -86,7 +92,7 @@ paths:
       operationId: createBooking
       tags: [bookings]
       summary: Create a new booking
-      description: Books a slot for a specific week, day and hour. Fails if already taken.
+      description: Books a slot for a specific car, week, day and hour. Fails if already taken.
       requestBody:
         required: true
         content:
@@ -156,9 +162,16 @@ components:
     Schedule:
       type: object
       properties:
-        days:
+        daysManual:
           type: array
-          description: Day-of-week numbers the school operates (0=Saturday ... 6=Friday in Arab week)
+          description: Day-of-week numbers available for manual cars (0=Saturday ... 6=Friday)
+          items:
+            type: integer
+            minimum: 0
+            maximum: 6
+        daysAutomatic:
+          type: array
+          description: Day-of-week numbers available for automatic cars
           items:
             type: integer
             minimum: 0
@@ -174,22 +187,26 @@ components:
           type: string
           description: WhatsApp contact number used by the school
       required:
-        - days
+        - daysManual
+        - daysAutomatic
         - hours
         - whatsappPhone
 
     Availability:
       type: object
       properties:
+        carId:
+          type: integer
         weekStart:
           type: string
           format: date
         bookedSlots:
           type: array
-          description: List of slot identifiers in the form "dayOfWeek-hour" that are already booked this week
+          description: List of slot identifiers in the form "dayOfWeek-hour" that are already booked this week for this car
           items:
             type: string
       required:
+        - carId
         - weekStart
         - bookedSlots
 
@@ -197,6 +214,8 @@ components:
       type: object
       properties:
         id:
+          type: integer
+        carId:
           type: integer
         name:
           type: string
@@ -221,6 +240,7 @@ components:
           format: date-time
       required:
         - id
+        - carId
         - name
         - phone
         - weekStart
@@ -231,6 +251,8 @@ components:
     CreateBookingRequest:
       type: object
       properties:
+        carId:
+          type: integer
         name:
           type: string
           minLength: 2
@@ -254,6 +276,7 @@ components:
           type: string
           maxLength: 500
       required:
+        - carId
         - name
         - phone
         - weekStart

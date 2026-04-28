@@ -1,189 +1,273 @@
-import React from "react";
+import React, { useState } from "react";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { WhatsAppButton } from "@/components/WhatsAppButton";
-import { useGetBookingStats, useListCars } from "@workspace/api-client-react";
-import { Link } from "wouter";
-import { Button } from "@/components/ui/button";
+import { CarBookingDialog } from "@/components/CarBookingDialog";
+import {
+  useListCars,
+  useGetBookingStats,
+  type Car,
+} from "@workspace/api-client-react";
 import { motion } from "framer-motion";
+import { CalendarDays, ShieldCheck, Sparkles, ArrowLeft } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import logoImage from "@assets/photo_2026-04-28_17-50-50_1777391528214.jpg";
 import nissanImage from "@assets/photo_2026-04-28_17-51-01_1777391528213.jpg";
 import fiatImage from "@assets/photo_2026-04-28_17-50-56_1777391528214.jpg";
 
+const CAR_IMAGES: Record<string, string> = {
+  "/cars/nissan-sunny.jpg": nissanImage,
+  "/cars/fiat-128.jpg": fiatImage,
+};
+
+function getCarImage(car: Car): string {
+  return CAR_IMAGES[car.imageUrl] ?? car.imageUrl;
+}
+
 export default function Home() {
+  const { data: cars, isLoading: carsLoading } = useListCars();
   const { data: stats } = useGetBookingStats();
-  const { data: cars } = useListCars();
+  const [selectedCar, setSelectedCar] = useState<Car | null>(null);
+
+  const scrollToCars = () => {
+    document.getElementById("cars")?.scrollIntoView({ behavior: "smooth" });
+  };
 
   return (
     <div className="flex min-h-screen flex-col bg-background text-foreground font-sans">
       <Header />
+
       <main className="flex-1">
-        {/* Hero Section */}
-        <section className="relative overflow-hidden pt-20 pb-32">
-          <div className="container relative z-10 grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-            <motion.div
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
+        {/* HERO */}
+        <section className="relative overflow-hidden">
+          <div
+            className="absolute inset-0 -z-10 bg-gradient-to-b from-primary/15 via-background to-background"
+            aria-hidden
+          />
+          <div className="container py-10 sm:py-16 lg:py-20 flex flex-col items-center text-center gap-6">
+            <motion.img
+              initial={{ opacity: 0, y: -10, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
               transition={{ duration: 0.6 }}
-              className="flex flex-col items-start text-right space-y-6"
+              src={logoImage}
+              alt="Aleajaybi Travel"
+              className="w-32 h-32 sm:w-40 sm:h-40 object-cover rounded-full ring-4 ring-primary/30 shadow-2xl"
+            />
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.1 }}
+              className="space-y-3"
             >
-              <div className="inline-flex items-center rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-sm font-medium text-primary">
-                الخيار الأول في تعليم القيادة
-              </div>
-              <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold leading-tight">
-                ابدأ رحلتك نحو <span className="text-primary">القيادة الآمنة</span> بثقة تامة
+              <Badge
+                variant="secondary"
+                className="bg-primary/15 text-primary border border-primary/30 font-bold text-xs px-3 py-1"
+              >
+                ✦ الخيار الأول لتعليم القيادة
+              </Badge>
+              <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold leading-tight max-w-3xl">
+                <span className="text-primary">Aleajaybi Travel</span>
+                <br />
+                <span className="text-foreground">
+                  ابدأ رحلتك نحو القيادة بثقة
+                </span>
               </h1>
-              <p className="text-lg text-muted-foreground max-w-[600px] leading-relaxed">
-                في مدرسة العجاهي، نقدم لك أحدث أساليب التدريب مع مدربين معتمدين وسيارات مجهزة لضمان حصولك على رخصة القيادة وامتلاك المهارة الحقيقية.
+              <p className="text-base sm:text-lg text-muted-foreground max-w-xl mx-auto leading-relaxed px-2">
+                احجز موعدك الآن مع مدربينا المحترفين واختر السيارة المناسبة
+                لك — مانيوال أو أوتوماتيك.
               </p>
-              <div className="flex flex-wrap gap-4 pt-4">
-                <Link href="/booking">
-                  <Button size="lg" className="h-12 px-8 text-base font-bold text-primary-foreground">
-                    احجز موعدك الآن
-                  </Button>
-                </Link>
-                <Link href="/contact">
-                  <Button size="lg" variant="outline" className="h-12 px-8 text-base font-bold border-primary text-primary hover:bg-primary hover:text-primary-foreground">
-                    تواصل معنا
-                  </Button>
-                </Link>
-              </div>
-              
-              {stats && (
-                <motion.div 
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.3, duration: 0.5 }}
-                  className="mt-8 flex gap-8 items-center bg-card p-6 rounded-2xl border border-border"
-                >
-                  <div className="flex flex-col">
-                    <span className="text-3xl font-bold text-primary">{stats.totalBookings}+</span>
-                    <span className="text-sm text-muted-foreground">متدرب سعيد</span>
-                  </div>
-                  <div className="w-px h-12 bg-border"></div>
-                  <div className="flex flex-col">
-                    <span className="text-3xl font-bold text-primary">{stats.thisWeekBookings}</span>
-                    <span className="text-sm text-muted-foreground">حجوزات هذا الأسبوع</span>
-                  </div>
-                </motion.div>
-              )}
             </motion.div>
 
             <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.6, delay: 0.2 }}
-              className="relative mx-auto lg:mx-0 w-full max-w-md aspect-square flex items-center justify-center"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.25 }}
+              className="flex flex-col sm:flex-row gap-3 w-full max-w-md"
             >
-              <div className="absolute inset-0 bg-primary/20 rounded-full blur-3xl" />
-              <img 
-                src={logoImage} 
-                alt="Aleajayhi Brand" 
-                className="relative z-10 w-full object-contain rounded-2xl shadow-2xl border-4 border-primary/20" 
-              />
+              <Button
+                size="lg"
+                className="h-12 font-extrabold text-base flex-1"
+                onClick={scrollToCars}
+                data-testid="button-hero-book"
+              >
+                <CalendarDays className="ml-2 h-5 w-5" />
+                احجز موعدك الآن
+              </Button>
             </motion.div>
+
+            {/* Stats strip */}
+            {stats && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.4 }}
+                className="grid grid-cols-2 gap-3 w-full max-w-md mt-4"
+              >
+                <div className="bg-card border border-border rounded-2xl py-3 px-4 text-center">
+                  <div className="text-2xl font-extrabold text-primary">
+                    {stats.totalBookings}+
+                  </div>
+                  <div className="text-xs text-muted-foreground mt-0.5">
+                    متدرب سعيد
+                  </div>
+                </div>
+                <div className="bg-card border border-border rounded-2xl py-3 px-4 text-center">
+                  <div className="text-2xl font-extrabold text-primary">
+                    {stats.thisWeekBookings}
+                  </div>
+                  <div className="text-xs text-muted-foreground mt-0.5">
+                    حجز هذا الأسبوع
+                  </div>
+                </div>
+              </motion.div>
+            )}
           </div>
         </section>
 
-        {/* Cars Showcase */}
-        <section className="py-24 bg-card">
+        {/* CARS SHOWCASE */}
+        <section id="cars" className="py-12 sm:py-16 bg-card/40">
           <div className="container">
-            <div className="text-center max-w-2xl mx-auto mb-16">
-              <h2 className="text-3xl md:text-4xl font-bold mb-4 text-primary">سيارات التدريب الخاصة بنا</h2>
-              <p className="text-muted-foreground">
-                نوفر لك أسطولاً من السيارات الحديثة (عادي وأوتوماتيك) المجهزة بالكامل لضمان أعلى مستويات الأمان والراحة أثناء التدريب.
+            <div className="text-center max-w-2xl mx-auto mb-8 sm:mb-10">
+              <h2 className="text-2xl sm:text-3xl font-extrabold mb-3">
+                اختر <span className="text-primary">سيارة التدريب</span>
+              </h2>
+              <p className="text-muted-foreground text-sm sm:text-base">
+                اضغط على أي سيارة لعرض الأيام والمواعيد المتاحة وتأكيد الحجز
+                مباشرة.
               </p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              <motion.div 
-                whileHover={{ y: -5 }}
-                className="group overflow-hidden rounded-2xl border border-border bg-background flex flex-col"
-              >
-                <div className="aspect-[4/3] relative overflow-hidden bg-muted">
-                  <img 
-                    src={nissanImage} 
-                    alt="Nissan Sunny" 
-                    className="object-cover w-full h-full transition-transform duration-500 group-hover:scale-105"
-                  />
-                </div>
-                <div className="p-6 flex flex-col items-center text-center">
-                  <h3 className="text-xl font-bold mb-2">نيسان صني (أوتوماتيك)</h3>
-                  <p className="text-muted-foreground text-sm">
-                    سيارة التدريب الأوتوماتيك المثالية. توفر راحة تامة وسهولة في التحكم للمبتدئين.
-                  </p>
-                </div>
-              </motion.div>
-
-              <motion.div 
-                whileHover={{ y: -5 }}
-                className="group overflow-hidden rounded-2xl border border-border bg-background flex flex-col"
-              >
-                <div className="aspect-[4/3] relative overflow-hidden bg-muted">
-                  <img 
-                    src={fiatImage} 
-                    alt="Fiat Manual" 
-                    className="object-cover w-full h-full transition-transform duration-500 group-hover:scale-105"
-                  />
-                </div>
-                <div className="p-6 flex flex-col items-center text-center">
-                  <h3 className="text-xl font-bold mb-2">فيات (مانيوال)</h3>
-                  <p className="text-muted-foreground text-sm">
-                    سيارة التدريب العادي. الخيار الأمثل لإتقان القيادة والتحكم الكامل في السيارة.
-                  </p>
-                </div>
-              </motion.div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 sm:gap-7 max-w-4xl mx-auto">
+              {carsLoading || !cars
+                ? Array.from({ length: 2 }).map((_, i) => (
+                    <div
+                      key={i}
+                      className="bg-card border border-border rounded-2xl overflow-hidden animate-pulse"
+                    >
+                      <div className="aspect-[4/3] bg-muted" />
+                      <div className="p-5 space-y-2">
+                        <div className="h-4 bg-muted rounded w-1/2" />
+                        <div className="h-3 bg-muted rounded w-3/4" />
+                      </div>
+                    </div>
+                  ))
+                : cars.map((car, i) => {
+                    const transmissionLabel =
+                      car.transmission === "automatic"
+                        ? "أوتوماتيك"
+                        : "مانيوال";
+                    return (
+                      <motion.button
+                        key={car.id}
+                        initial={{ opacity: 0, y: 20 }}
+                        whileInView={{ opacity: 1, y: 0 }}
+                        viewport={{ once: true }}
+                        transition={{ delay: i * 0.1 }}
+                        whileHover={{ y: -4 }}
+                        onClick={() => setSelectedCar(car)}
+                        data-testid={`button-car-${car.id}`}
+                        className="group text-right bg-card border border-border rounded-2xl overflow-hidden shadow-sm hover:shadow-xl hover:border-primary/60 transition-all"
+                      >
+                        <div className="aspect-[4/3] relative overflow-hidden bg-muted">
+                          <img
+                            src={getCarImage(car)}
+                            alt={car.name}
+                            className="object-cover w-full h-full transition-transform duration-500 group-hover:scale-105"
+                          />
+                          <div className="absolute top-3 right-3">
+                            <Badge
+                              className={`font-extrabold ${
+                                car.transmission === "automatic"
+                                  ? "bg-blue-500 hover:bg-blue-500 text-white"
+                                  : "bg-amber-500 hover:bg-amber-500 text-black"
+                              }`}
+                            >
+                              {transmissionLabel}
+                            </Badge>
+                          </div>
+                        </div>
+                        <div className="p-5">
+                          <div className="flex items-center justify-between gap-2">
+                            <h3 className="text-lg sm:text-xl font-extrabold text-primary">
+                              {car.name}
+                            </h3>
+                            <ArrowLeft className="h-5 w-5 text-primary opacity-0 group-hover:opacity-100 transition-opacity" />
+                          </div>
+                          <p className="text-muted-foreground text-sm mt-2 leading-relaxed">
+                            {car.description}
+                          </p>
+                          <div className="mt-4 inline-flex items-center gap-2 text-primary font-bold text-sm">
+                            <CalendarDays className="h-4 w-4" />
+                            عرض المواعيد المتاحة
+                          </div>
+                        </div>
+                      </motion.button>
+                    );
+                  })}
             </div>
           </div>
         </section>
 
-        {/* Why Choose Us */}
-        <section className="py-24">
+        {/* WHY US */}
+        <section className="py-12 sm:py-16">
           <div className="container">
-            <div className="text-center max-w-2xl mx-auto mb-16">
-              <h2 className="text-3xl md:text-4xl font-bold mb-4">لماذا تختار <span className="text-primary">العجاهي؟</span></h2>
-              <p className="text-muted-foreground">
-                نحن لا نعلمك فقط كيف تقود، بل نعلمك كيف تكون سائقاً آمناً وواثقاً على الطريق.
-              </p>
+            <div className="text-center max-w-2xl mx-auto mb-8 sm:mb-10">
+              <h2 className="text-2xl sm:text-3xl font-extrabold mb-3">
+                لماذا <span className="text-primary">العجايبي؟</span>
+              </h2>
             </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               {[
                 {
-                  title: "مدربون محترفون",
-                  desc: "فريق من المدربين المعتمدين وذوي الخبرة الطويلة لضمان تعليمك بأفضل الطرق."
+                  icon: ShieldCheck,
+                  title: "مدربون معتمدون",
+                  desc: "خبرة وكفاءة لضمان قيادة آمنة.",
                 },
                 {
+                  icon: CalendarDays,
                   title: "مرونة في المواعيد",
-                  desc: "نظام حجز إلكتروني يتيح لك اختيار الأوقات التي تناسب جدولك بكل سهولة."
+                  desc: "اختر اليوم والساعة اللي تناسبك.",
                 },
                 {
+                  icon: Sparkles,
                   title: "سيارات مجهزة",
-                  desc: "أحدث السيارات المجهزة بوسائل الأمان الإضافية لضمان سلامتك أثناء التدريب."
-                }
-              ].map((feature, i) => (
-                <motion.div 
-                  key={i}
-                  initial={{ opacity: 0, y: 20 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ delay: i * 0.1 }}
-                  className="bg-card p-8 rounded-2xl border border-border text-center flex flex-col items-center"
-                >
-                  <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-6 text-primary">
-                    {/* Placeholder icon since we don't import too many lucide icons to save space, but let's use simple CSS shapes */}
-                    <div className="w-8 h-8 rounded-sm bg-primary transform rotate-45" />
-                  </div>
-                  <h3 className="text-xl font-bold mb-3">{feature.title}</h3>
-                  <p className="text-muted-foreground text-sm leading-relaxed">{feature.desc}</p>
-                </motion.div>
-              ))}
+                  desc: "مانيوال وأوتوماتيك بحالة ممتازة.",
+                },
+              ].map((f, i) => {
+                const Icon = f.icon;
+                return (
+                  <motion.div
+                    key={i}
+                    initial={{ opacity: 0, y: 12 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ delay: i * 0.1 }}
+                    className="bg-card border border-border rounded-2xl p-5 text-center"
+                  >
+                    <div className="w-12 h-12 mx-auto bg-primary/15 text-primary rounded-full flex items-center justify-center mb-3">
+                      <Icon className="h-6 w-6" />
+                    </div>
+                    <h3 className="font-extrabold text-base mb-1">{f.title}</h3>
+                    <p className="text-sm text-muted-foreground">{f.desc}</p>
+                  </motion.div>
+                );
+              })}
             </div>
           </div>
         </section>
       </main>
+
       <Footer />
       <WhatsAppButton />
+
+      <CarBookingDialog
+        car={selectedCar}
+        open={selectedCar !== null}
+        onOpenChange={(open) => {
+          if (!open) setSelectedCar(null);
+        }}
+      />
     </div>
   );
 }
