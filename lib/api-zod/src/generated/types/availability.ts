@@ -9,6 +9,6 @@
 export interface Availability {
   carId: number;
   weekStart: Date;
-  /** List of slot identifiers in the form "dayOfWeek-hour" that are already booked this week for this car */
+  /** List of slot identifiers in the form "dayOfWeek-startMinutes" that are already booked this week for this car */
   bookedSlots: string[];
 }

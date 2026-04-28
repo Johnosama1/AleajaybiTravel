@@ -11,8 +11,10 @@ export interface Schedule {
   daysManual: number[];
   /** Day-of-week numbers available for automatic cars */
   daysAutomatic: number[];
-  /** Hours of the day the school operates (24-hour clock) */
-  hours: number[];
+  /** Bookable slot start times (minutes from midnight). Each slot is slotIntervalMinutes long. */
+  slots: number[];
+  /** Duration between consecutive slot start times (e.g. 75 for 1h15m) */
+  slotIntervalMinutes: number;
   /** WhatsApp contact number used by the school */
   whatsappPhone: string;
 }

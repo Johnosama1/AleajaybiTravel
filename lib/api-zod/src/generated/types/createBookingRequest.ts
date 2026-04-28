@@ -26,9 +26,9 @@ export interface CreateBookingRequest {
   dayOfWeek: number;
   /**
    * @minimum 0
-   * @maximum 23
+   * @maximum 1439
    */
-  hour: number;
+  startMinutes: number;
   /** @maxLength 500 */
   notes?: string;
 }

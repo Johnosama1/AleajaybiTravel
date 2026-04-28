@@ -114,7 +114,7 @@ export function useHealthCheck<
 }
 
 /**
- * Returns the days of the week (per transmission) and hours of the day the school operates
+ * Returns the days of the week (per transmission) and the bookable slots
  * @summary Get the weekly operating schedule
  */
 export const getGetScheduleUrl = () => {
@@ -359,7 +359,7 @@ export function useListBookings<
 }
 
 /**
- * Books a slot for a specific car, week, day and hour. Fails if already taken.
+ * Books a slot for a specific car, week, day and start time. Fails if already taken.
  * @summary Create a new booking
  */
 export const getCreateBookingUrl = () => {

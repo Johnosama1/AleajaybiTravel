@@ -5,22 +5,11 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
-import {
-  ChevronRight,
-  ChevronLeft,
-  Loader2,
-  CheckCircle2,
-  Clock,
-  Calendar,
-  XCircle,
-} from "lucide-react";
+import { Loader2, CheckCircle2, ChevronRight } from "lucide-react";
 import {
   useGetSchedule,
   useGetAvailability,
@@ -35,7 +24,7 @@ import {
   getSaturdayOfWeek,
   formatDateToYYYYMMDD,
   ARABIC_DAYS,
-  formatHour,
+  formatMinutes,
   addDays,
   formatArabicDate,
 } from "@/lib/date";
@@ -55,28 +44,22 @@ export function CarBookingDialog({
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const [weekSaturday, setWeekSaturday] = useState(() =>
-    getSaturdayOfWeek(new Date()),
-  );
+  const weekSaturday = useMemo(() => getSaturdayOfWeek(new Date()), []);
   const weekStartString = formatDateToYYYYMMDD(weekSaturday);
 
   const [selectedDay, setSelectedDay] = useState<number | null>(null);
-  const [selectedHour, setSelectedHour] = useState<number | null>(null);
+  const [selectedSlot, setSelectedSlot] = useState<number | null>(null);
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
-  const [notes, setNotes] = useState("");
   const [bookingSuccess, setBookingSuccess] = useState(false);
 
-  // Reset state every time the dialog opens for a (potentially different) car
   useEffect(() => {
     if (open) {
       setSelectedDay(null);
-      setSelectedHour(null);
+      setSelectedSlot(null);
       setName("");
       setPhone("");
-      setNotes("");
       setBookingSuccess(false);
-      setWeekSaturday(getSaturdayOfWeek(new Date()));
     }
   }, [open, car?.id]);
 
@@ -105,35 +88,17 @@ export function CarBookingDialog({
       : schedule.daysManual;
   }, [schedule, car]);
 
-  const hours = schedule?.hours ?? [];
+  const slots = schedule?.slots ?? [];
 
   const bookedSet = useMemo(
     () => new Set(availability?.bookedSlots ?? []),
     [availability],
   );
 
-  const handlePrevWeek = () => {
-    setWeekSaturday((d) => addDays(d, -7));
-    setSelectedDay(null);
-    setSelectedHour(null);
-  };
-  const handleNextWeek = () => {
-    setWeekSaturday((d) => addDays(d, 7));
-    setSelectedDay(null);
-    setSelectedHour(null);
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!car) return;
-    if (selectedDay === null || selectedHour === null) {
-      toast({
-        title: "اختر موعد",
-        description: "يرجى اختيار يوم وساعة من الجدول.",
-        variant: "destructive",
-      });
-      return;
-    }
+    if (!car || selectedDay === null || selectedSlot === null) return;
+
     if (!name || name.trim().length < 2) {
       toast({
         title: "بيانات ناقصة",
@@ -159,8 +124,7 @@ export function CarBookingDialog({
           phone: phone.trim(),
           weekStart: weekStartString,
           dayOfWeek: selectedDay,
-          hour: selectedHour,
-          notes: notes.trim() || undefined,
+          startMinutes: selectedSlot,
         },
       });
 
@@ -180,16 +144,12 @@ export function CarBookingDialog({
       setBookingSuccess(true);
 
       const schoolPhone = schedule?.whatsappPhone || "201099399666";
-      const transmissionLabel =
-        car.transmission === "automatic" ? "أوتوماتيك" : "مانيوال";
-      const message = `مرحباً، أود تأكيد حجزي لتدريب القيادة في مدرسة العجايبي.
-السيارة: ${car.name} (${transmissionLabel})
+      const bookingDate = addDays(weekSaturday, selectedDay);
+      const message = `حجز جديد - ${car.name}
+${ARABIC_DAYS[selectedDay]} ${formatArabicDate(bookingDate)}
+الساعة ${formatMinutes(selectedSlot)}
 الاسم: ${name}
-الموبايل: ${phone}
-اليوم: ${ARABIC_DAYS[selectedDay]}
-الساعة: ${formatHour(selectedHour)}
-بداية الأسبوع: ${weekStartString}
-${notes ? `ملاحظات: ${notes}` : ""}`;
+الموبايل: ${phone}`;
 
       const waUrl = `https://wa.me/${schoolPhone}?text=${encodeURIComponent(message)}`;
       window.open(waUrl, "_blank");
@@ -207,28 +167,16 @@ ${notes ? `ملاحظات: ${notes}` : ""}`;
 
   if (!car) return null;
 
-  const transmissionLabel =
-    car.transmission === "automatic" ? "أوتوماتيك" : "مانيوال";
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className="max-w-2xl max-h-[92vh] overflow-y-auto p-0"
+        className="max-w-xl max-h-[92vh] overflow-y-auto p-0"
         data-testid="dialog-car-booking"
       >
         <DialogHeader className="p-5 sm:p-6 pb-3 border-b border-border/60 text-right">
-          <DialogTitle className="flex items-center gap-3 text-right text-xl sm:text-2xl">
-            <span className="text-primary">{car.name}</span>
-            <Badge
-              variant="secondary"
-              className="bg-primary/15 text-primary border border-primary/30 font-bold"
-            >
-              {transmissionLabel}
-            </Badge>
+          <DialogTitle className="text-right text-xl sm:text-2xl text-primary">
+            {car.name}
           </DialogTitle>
-          <DialogDescription className="text-right text-sm">
-            اختر اليوم والساعة المناسبين لك من الأيام المتاحة لهذه السيارة.
-          </DialogDescription>
         </DialogHeader>
 
         <AnimatePresence mode="wait">
@@ -246,8 +194,7 @@ ${notes ? `ملاحظات: ${notes}` : ""}`;
               </div>
               <h3 className="text-2xl font-extrabold">تم الحجز بنجاح!</h3>
               <p className="text-muted-foreground max-w-md">
-                شكراً لك يا {name}. تم تسجيل موعدك على {car.name}. لو واتساب لم
-                يفتح تلقائيًا، تواصل معنا مباشرة لتأكيد الحجز.
+                لو واتساب لم يفتح تلقائيًا، تواصل معنا مباشرة لتأكيد الحجز.
               </p>
               <Button
                 onClick={() => onOpenChange(false)}
@@ -264,164 +211,73 @@ ${notes ? `ملاحظات: ${notes}` : ""}`;
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="p-5 sm:p-6 space-y-6"
+              className="p-5 sm:p-6 space-y-5"
             >
-              {/* Week navigator */}
-              <div className="flex items-center justify-between gap-2 bg-muted/40 rounded-xl p-2">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleNextWeek}
-                  data-testid="button-next-week"
-                  className="font-bold"
-                >
-                  <ChevronRight className="h-4 w-4 ml-1" />
-                  التالي
-                </Button>
-                <div className="text-center">
-                  <div className="text-[11px] text-muted-foreground">
-                    أسبوع التدريب
-                  </div>
-                  <div className="font-extrabold text-sm" dir="ltr">
-                    {weekStartString}
-                  </div>
+              {availabilityLoading ? (
+                <div className="py-10 flex items-center justify-center text-primary">
+                  <Loader2 className="h-6 w-6 animate-spin" />
                 </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handlePrevWeek}
-                  data-testid="button-prev-week"
-                  className="font-bold"
-                >
-                  السابق
-                  <ChevronLeft className="h-4 w-4 mr-1" />
-                </Button>
-              </div>
-
-              {/* Days */}
-              <div>
-                <div className="flex items-center gap-2 mb-3 text-sm font-bold text-foreground/80">
-                  <Calendar className="h-4 w-4 text-primary" />
-                  الأيام المتاحة لهذه السيارة
-                </div>
-                {availabilityLoading ? (
-                  <div className="py-6 flex items-center justify-center text-primary">
-                    <Loader2 className="h-6 w-6 animate-spin" />
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-3 gap-2">
-                    {days.map((dayIdx) => {
-                      const date = addDays(weekSaturday, dayIdx);
-                      const isActive = selectedDay === dayIdx;
-                      // Count free slots that day
-                      const freeCount = hours.filter(
-                        (h) => !bookedSet.has(`${dayIdx}-${h}`),
-                      ).length;
-                      const isFull = freeCount === 0;
-                      return (
-                        <button
-                          key={dayIdx}
-                          type="button"
-                          disabled={isFull}
-                          onClick={() => {
-                            setSelectedDay(dayIdx);
-                            setSelectedHour(null);
-                          }}
-                          data-testid={`button-day-${dayIdx}`}
-                          className={`rounded-xl p-3 text-center border-2 transition-all ${
-                            isActive
-                              ? "bg-primary text-primary-foreground border-primary shadow-md"
-                              : isFull
-                                ? "bg-destructive/5 border-destructive/20 text-muted-foreground cursor-not-allowed opacity-60"
-                                : "bg-card border-border hover:border-primary hover:bg-primary/5"
-                          }`}
-                        >
-                          <div className="text-base font-extrabold">
+              ) : (
+                <div className="space-y-5">
+                  {days.map((dayIdx) => {
+                    const date = addDays(weekSaturday, dayIdx);
+                    const availableSlots = slots.filter(
+                      (m) => !bookedSet.has(`${dayIdx}-${m}`),
+                    );
+                    if (availableSlots.length === 0) return null;
+                    return (
+                      <div
+                        key={dayIdx}
+                        className="rounded-2xl border border-border/60 bg-card/60 p-4"
+                        data-testid={`day-block-${dayIdx}`}
+                      >
+                        <div className="flex items-baseline justify-between gap-3 mb-3">
+                          <div className="text-lg font-extrabold text-primary">
                             {ARABIC_DAYS[dayIdx]}
                           </div>
-                          <div
-                            className={`text-[11px] mt-1 ${isActive ? "text-primary-foreground/80" : "text-muted-foreground"}`}
-                          >
+                          <div className="text-sm text-muted-foreground">
                             {formatArabicDate(date)}
                           </div>
-                          <div
-                            className={`text-[11px] mt-1 font-medium ${isActive ? "text-primary-foreground" : isFull ? "text-destructive" : "text-primary"}`}
-                          >
-                            {isFull
-                              ? "مكتمل"
-                              : `${freeCount} موعد متاح`}
-                          </div>
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-
-              {/* Hours */}
-              {selectedDay !== null && (
-                <motion.div
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                >
-                  <div className="flex items-center gap-2 mb-3 text-sm font-bold text-foreground/80">
-                    <Clock className="h-4 w-4 text-primary" />
-                    المواعيد يوم {ARABIC_DAYS[selectedDay]}
-                  </div>
-                  <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
-                    {hours.map((hour) => {
-                      const slotKey = `${selectedDay}-${hour}`;
-                      const isBooked = bookedSet.has(slotKey);
-                      const isActive = selectedHour === hour;
-                      return (
-                        <button
-                          key={hour}
-                          type="button"
-                          disabled={isBooked}
-                          onClick={() => setSelectedHour(hour)}
-                          data-testid={`button-hour-${hour}`}
-                          className={`rounded-lg py-2.5 text-sm font-extrabold border transition-all ${
-                            isBooked
-                              ? "bg-destructive/10 text-destructive border-destructive/20 cursor-not-allowed line-through"
-                              : isActive
-                                ? "bg-primary text-primary-foreground border-primary shadow-sm"
-                                : "bg-secondary border-border hover:border-primary hover:text-primary"
-                          }`}
-                        >
-                          <span dir="ltr">{formatHour(hour)}</span>
-                          {isBooked && (
-                            <XCircle className="inline-block h-3 w-3 mr-1 align-middle" />
-                          )}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </motion.div>
+                        </div>
+                        <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                          {availableSlots.map((m) => {
+                            const isActive =
+                              selectedDay === dayIdx && selectedSlot === m;
+                            return (
+                              <button
+                                key={`${dayIdx}-${m}`}
+                                type="button"
+                                onClick={() => {
+                                  setSelectedDay(dayIdx);
+                                  setSelectedSlot(m);
+                                }}
+                                data-testid={`button-slot-${dayIdx}-${m}`}
+                                className={`rounded-lg py-2.5 text-sm font-extrabold border-2 transition-all ${
+                                  isActive
+                                    ? "bg-primary text-primary-foreground border-primary shadow-md scale-105"
+                                    : "bg-secondary border-border hover:border-primary hover:text-primary"
+                                }`}
+                              >
+                                <span dir="ltr">{formatMinutes(m)}</span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               )}
 
-              {/* Form */}
-              {selectedDay !== null && selectedHour !== null && (
+              {selectedDay !== null && selectedSlot !== null && (
                 <motion.form
                   initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
                   onSubmit={handleSubmit}
                   className="space-y-4 border-t border-border/60 pt-5"
                 >
-                  <div className="bg-primary/10 border border-primary/30 rounded-xl p-3 text-center">
-                    <div className="text-xs text-muted-foreground">
-                      الموعد المختار
-                    </div>
-                    <div className="font-extrabold text-primary">
-                      {ARABIC_DAYS[selectedDay]} -{" "}
-                      <span dir="ltr" className="inline-block">
-                        {formatHour(selectedHour)}
-                      </span>{" "}
-                      • {car.name}
-                    </div>
-                  </div>
-
                   <div className="space-y-1.5">
-                    <Label htmlFor="name">الاسم بالكامل</Label>
+                    <Label htmlFor="name">الاسم</Label>
                     <Input
                       id="name"
                       value={name}
@@ -446,31 +302,22 @@ ${notes ? `ملاحظات: ${notes}` : ""}`;
                     />
                   </div>
 
-                  <div className="space-y-1.5">
-                    <Label htmlFor="notes">ملاحظات (اختياري)</Label>
-                    <Textarea
-                      id="notes"
-                      value={notes}
-                      onChange={(e) => setNotes(e.target.value)}
-                      placeholder="أي تفاصيل إضافية..."
-                      className="resize-none min-h-[70px]"
-                      data-testid="input-notes"
-                    />
-                  </div>
-
                   <Button
                     type="submit"
-                    className="w-full h-12 font-extrabold text-base"
+                    className="w-full h-12 font-extrabold text-base gap-2"
                     disabled={createBookingMutation.isPending}
                     data-testid="button-submit-booking"
                   >
                     {createBookingMutation.isPending ? (
                       <>
-                        <Loader2 className="h-5 w-5 animate-spin ml-2" />
+                        <Loader2 className="h-5 w-5 animate-spin" />
                         جاري الحجز...
                       </>
                     ) : (
-                      "تأكيد الحجز عبر واتساب"
+                      <>
+                        تأكيد الحجز عبر واتساب
+                        <ChevronRight className="h-5 w-5" />
+                      </>
                     )}
                   </Button>
                 </motion.form>

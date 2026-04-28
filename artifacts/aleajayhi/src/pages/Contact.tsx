@@ -105,8 +105,7 @@ export default function Contact() {
                           className="text-xs text-muted-foreground mt-1"
                           dir="ltr"
                         >
-                          {schedule.hours[0]}:00 -{" "}
-                          {schedule.hours[schedule.hours.length - 1]}:00
+                          09:00 - 20:15
                         </div>
                       </div>
                     ))}

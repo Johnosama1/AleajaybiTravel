@@ -19,9 +19,9 @@ export interface Booking {
   dayOfWeek: number;
   /**
    * @minimum 0
-   * @maximum 23
+   * @maximum 1439
    */
-  hour: number;
+  startMinutes: number;
   notes?: string | null;
   createdAt: Date;
 }

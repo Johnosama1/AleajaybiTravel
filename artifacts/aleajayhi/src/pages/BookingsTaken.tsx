@@ -6,7 +6,7 @@ import {
   useListBookings,
   useListCars,
 } from "@workspace/api-client-react";
-import { ARABIC_DAYS, formatHour } from "@/lib/date";
+import { ARABIC_DAYS, formatMinutes } from "@/lib/date";
 import { Badge } from "@/components/ui/badge";
 import {
   Card,
@@ -54,7 +54,7 @@ export default function BookingsTaken() {
         return b.weekStart.localeCompare(a.weekStart);
       }
       if (a.dayOfWeek !== b.dayOfWeek) return a.dayOfWeek - b.dayOfWeek;
-      return a.hour - b.hour;
+      return a.startMinutes - b.startMinutes;
     });
   }, [bookings, carFilter]);
 
@@ -176,7 +176,7 @@ export default function BookingsTaken() {
                                     className="text-primary font-extrabold"
                                     dir="ltr"
                                   >
-                                    {formatHour(b.hour)}
+                                    {formatMinutes(b.startMinutes)}
                                   </span>
                                 </div>
                                 <div className="text-xs text-muted-foreground mt-0.5">

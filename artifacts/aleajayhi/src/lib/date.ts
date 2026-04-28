@@ -31,12 +31,14 @@ export const ARABIC_DAYS = [
   "الجمعة",
 ];
 
-export function formatHour(hour: number): string {
-  return `${String(hour).padStart(2, "0")}:00`;
+export function formatMinutes(totalMinutes: number): string {
+  const h = Math.floor(totalMinutes / 60);
+  const m = totalMinutes % 60;
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
 }
 
 export function formatArabicDate(date: Date): string {
-  // e.g. "السبت 2 مايو 2026"
+  // e.g. "2 مايو 2026"
   const months = [
     "يناير",
     "فبراير",

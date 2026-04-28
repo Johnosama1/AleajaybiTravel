@@ -17,7 +17,8 @@ export const bookingsTable = pgTable(
     phone: text("phone").notNull(),
     weekStart: date("week_start").notNull(),
     dayOfWeek: integer("day_of_week").notNull(),
-    hour: integer("hour").notNull(),
+    // Minutes from midnight (e.g. 540 = 09:00, 615 = 10:15)
+    startMinutes: integer("start_minutes").notNull(),
     notes: text("notes"),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
@@ -28,7 +29,7 @@ export const bookingsTable = pgTable(
       table.carId,
       table.weekStart,
       table.dayOfWeek,
-      table.hour,
+      table.startMinutes,
     ),
   }),
 );

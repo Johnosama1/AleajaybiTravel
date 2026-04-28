@@ -16,7 +16,7 @@ export const HealthCheckResponse = zod.object({
 });
 
 /**
- * Returns the days of the week (per transmission) and hours of the day the school operates
+ * Returns the days of the week (per transmission) and the bookable slots
  * @summary Get the weekly operating schedule
  */
 export const getScheduleResponseDaysManualItemMin = 0;
@@ -25,8 +25,8 @@ export const getScheduleResponseDaysManualItemMax = 6;
 export const getScheduleResponseDaysAutomaticItemMin = 0;
 export const getScheduleResponseDaysAutomaticItemMax = 6;
 
-export const getScheduleResponseHoursItemMin = 0;
-export const getScheduleResponseHoursItemMax = 23;
+export const getScheduleResponseSlotsItemMin = 0;
+export const getScheduleResponseSlotsItemMax = 1439;
 
 export const GetScheduleResponse = zod.object({
   daysManual: zod
@@ -47,14 +47,21 @@ export const GetScheduleResponse = zod.object({
         .max(getScheduleResponseDaysAutomaticItemMax),
     )
     .describe("Day-of-week numbers available for automatic cars"),
-  hours: zod
+  slots: zod
     .array(
       zod
         .number()
-        .min(getScheduleResponseHoursItemMin)
-        .max(getScheduleResponseHoursItemMax),
+        .min(getScheduleResponseSlotsItemMin)
+        .max(getScheduleResponseSlotsItemMax),
     )
-    .describe("Hours of the day the school operates (24-hour clock)"),
+    .describe(
+      "Bookable slot start times (minutes from midnight). Each slot is slotIntervalMinutes long.",
+    ),
+  slotIntervalMinutes: zod
+    .number()
+    .describe(
+      "Duration between consecutive slot start times (e.g. 75 for 1h15m)",
+    ),
   whatsappPhone: zod
     .string()
     .describe("WhatsApp contact number used by the school"),
@@ -79,7 +86,7 @@ export const GetAvailabilityResponse = zod.object({
   bookedSlots: zod
     .array(zod.string())
     .describe(
-      'List of slot identifiers in the form \"dayOfWeek-hour\" that are already booked this week for this car',
+      'List of slot identifiers in the form \"dayOfWeek-startMinutes\" that are already booked this week for this car',
     ),
 });
 
@@ -90,8 +97,8 @@ export const GetAvailabilityResponse = zod.object({
 export const listBookingsResponseDayOfWeekMin = 0;
 export const listBookingsResponseDayOfWeekMax = 6;
 
-export const listBookingsResponseHourMin = 0;
-export const listBookingsResponseHourMax = 23;
+export const listBookingsResponseStartMinutesMin = 0;
+export const listBookingsResponseStartMinutesMax = 1439;
 
 export const ListBookingsResponseItem = zod.object({
   id: zod.number(),
@@ -103,17 +110,17 @@ export const ListBookingsResponseItem = zod.object({
     .number()
     .min(listBookingsResponseDayOfWeekMin)
     .max(listBookingsResponseDayOfWeekMax),
-  hour: zod
+  startMinutes: zod
     .number()
-    .min(listBookingsResponseHourMin)
-    .max(listBookingsResponseHourMax),
+    .min(listBookingsResponseStartMinutesMin)
+    .max(listBookingsResponseStartMinutesMax),
   notes: zod.string().nullish(),
   createdAt: zod.coerce.date(),
 });
 export const ListBookingsResponse = zod.array(ListBookingsResponseItem);
 
 /**
- * Books a slot for a specific car, week, day and hour. Fails if already taken.
+ * Books a slot for a specific car, week, day and start time. Fails if already taken.
  * @summary Create a new booking
  */
 export const createBookingBodyNameMin = 2;
@@ -125,8 +132,8 @@ export const createBookingBodyPhoneMax = 20;
 export const createBookingBodyDayOfWeekMin = 0;
 export const createBookingBodyDayOfWeekMax = 6;
 
-export const createBookingBodyHourMin = 0;
-export const createBookingBodyHourMax = 23;
+export const createBookingBodyStartMinutesMin = 0;
+export const createBookingBodyStartMinutesMax = 1439;
 
 export const createBookingBodyNotesMax = 500;
 
@@ -145,10 +152,10 @@ export const CreateBookingBody = zod.object({
     .number()
     .min(createBookingBodyDayOfWeekMin)
     .max(createBookingBodyDayOfWeekMax),
-  hour: zod
+  startMinutes: zod
     .number()
-    .min(createBookingBodyHourMin)
-    .max(createBookingBodyHourMax),
+    .min(createBookingBodyStartMinutesMin)
+    .max(createBookingBodyStartMinutesMax),
   notes: zod.string().max(createBookingBodyNotesMax).optional(),
 });
 

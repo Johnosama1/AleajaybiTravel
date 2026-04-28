@@ -6,7 +6,7 @@ import {
   ListBookingsResponse,
   GetBookingStatsResponse,
 } from "@workspace/api-zod";
-import { DAYS_MANUAL, DAYS_AUTOMATIC, HOURS } from "./schedule.js";
+import { DAYS_MANUAL, DAYS_AUTOMATIC, SLOTS } from "./schedule.js";
 
 const dateString = z
   .string()
@@ -23,7 +23,7 @@ const createBookingBody = z.object({
   phone: z.string().min(6).max(20),
   weekStart: dateString,
   dayOfWeek: z.number().int().min(0).max(6),
-  hour: z.number().int().min(0).max(23),
+  startMinutes: z.number().int().min(0).max(1439),
   notes: z.string().max(500).optional(),
 });
 
@@ -56,7 +56,7 @@ router.get("/availability", (req, res, next) => {
     const rows = await db
       .select({
         dayOfWeek: bookingsTable.dayOfWeek,
-        hour: bookingsTable.hour,
+        startMinutes: bookingsTable.startMinutes,
       })
       .from(bookingsTable)
       .where(
@@ -68,7 +68,7 @@ router.get("/availability", (req, res, next) => {
     res.json({
       carId,
       weekStart,
-      bookedSlots: rows.map((r) => `${r.dayOfWeek}-${r.hour}`),
+      bookedSlots: rows.map((r) => `${r.dayOfWeek}-${r.startMinutes}`),
     });
   })().catch(next);
 });
@@ -81,7 +81,7 @@ router.get("/bookings", (_req, res, next) => {
       .orderBy(
         asc(bookingsTable.weekStart),
         asc(bookingsTable.dayOfWeek),
-        asc(bookingsTable.hour),
+        asc(bookingsTable.startMinutes),
       );
     const data = ListBookingsResponse.parse(
       rows.map((r) => ({
@@ -91,7 +91,7 @@ router.get("/bookings", (_req, res, next) => {
         phone: r.phone,
         weekStart: r.weekStart,
         dayOfWeek: r.dayOfWeek,
-        hour: r.hour,
+        startMinutes: r.startMinutes,
         notes: r.notes,
         createdAt: r.createdAt.toISOString(),
       })),
@@ -112,7 +112,6 @@ router.post("/bookings", (req, res, next) => {
     }
     const body = parsed.data;
 
-    // Validate car exists and the day matches its transmission
     const [car] = await db
       .select({ transmission: carsTable.transmission })
       .from(carsTable)
@@ -138,10 +137,10 @@ router.post("/bookings", (req, res, next) => {
       return;
     }
 
-    if (!HOURS.includes(body.hour)) {
+    if (!SLOTS.includes(body.startMinutes)) {
       res.status(400).json({
-        error: "HOUR_NOT_AVAILABLE",
-        message: "هذه الساعة خارج مواعيد العمل.",
+        error: "SLOT_NOT_AVAILABLE",
+        message: "هذا الموعد غير متاح ضمن مواعيد المدرسة.",
       });
       return;
     }
@@ -154,7 +153,7 @@ router.post("/bookings", (req, res, next) => {
           eq(bookingsTable.carId, body.carId),
           eq(bookingsTable.weekStart, body.weekStart),
           eq(bookingsTable.dayOfWeek, body.dayOfWeek),
-          eq(bookingsTable.hour, body.hour),
+          eq(bookingsTable.startMinutes, body.startMinutes),
         ),
       )
       .limit(1);
@@ -175,7 +174,7 @@ router.post("/bookings", (req, res, next) => {
           phone: body.phone,
           weekStart: body.weekStart,
           dayOfWeek: body.dayOfWeek,
-          hour: body.hour,
+          startMinutes: body.startMinutes,
           notes: body.notes ?? null,
         })
         .returning();
@@ -187,7 +186,7 @@ router.post("/bookings", (req, res, next) => {
         phone: created.phone,
         weekStart: created.weekStart,
         dayOfWeek: created.dayOfWeek,
-        hour: created.hour,
+        startMinutes: created.startMinutes,
         notes: created.notes,
         createdAt: created.createdAt.toISOString(),
       });

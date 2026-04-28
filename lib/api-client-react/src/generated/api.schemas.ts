@@ -14,8 +14,10 @@ export interface Schedule {
   daysManual: number[];
   /** Day-of-week numbers available for automatic cars */
   daysAutomatic: number[];
-  /** Hours of the day the school operates (24-hour clock) */
-  hours: number[];
+  /** Bookable slot start times (minutes from midnight). Each slot is slotIntervalMinutes long. */
+  slots: number[];
+  /** Duration between consecutive slot start times (e.g. 75 for 1h15m) */
+  slotIntervalMinutes: number;
   /** WhatsApp contact number used by the school */
   whatsappPhone: string;
 }
@@ -23,7 +25,7 @@ export interface Schedule {
 export interface Availability {
   carId: number;
   weekStart: string;
-  /** List of slot identifiers in the form "dayOfWeek-hour" that are already booked this week for this car */
+  /** List of slot identifiers in the form "dayOfWeek-startMinutes" that are already booked this week for this car */
   bookedSlots: string[];
 }
 
@@ -40,9 +42,9 @@ export interface Booking {
   dayOfWeek: number;
   /**
    * @minimum 0
-   * @maximum 23
+   * @maximum 1439
    */
-  hour: number;
+  startMinutes: number;
   notes?: string | null;
   createdAt: string;
 }
@@ -67,9 +69,9 @@ export interface CreateBookingRequest {
   dayOfWeek: number;
   /**
    * @minimum 0
-   * @maximum 23
+   * @maximum 1439
    */
-  hour: number;
+  startMinutes: number;
   /** @maxLength 500 */
   notes?: string;
 }

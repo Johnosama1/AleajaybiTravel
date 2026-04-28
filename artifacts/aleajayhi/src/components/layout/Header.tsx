@@ -64,7 +64,7 @@ export function Header() {
             </Button>
           </SheetTrigger>
           <SheetContent
-            side="left"
+            side="right"
             className="w-[280px] sm:w-[340px] flex flex-col p-0"
           >
             <SheetHeader className="p-6 border-b border-border/50 text-right">

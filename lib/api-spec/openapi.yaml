@@ -36,7 +36,7 @@ paths:
       operationId: getSchedule
       tags: [schedule]
       summary: Get the weekly operating schedule
-      description: Returns the days of the week (per transmission) and hours of the day the school operates
+      description: Returns the days of the week (per transmission) and the bookable slots
       responses:
         "200":
           description: Weekly schedule
@@ -92,7 +92,7 @@ paths:
       operationId: createBooking
       tags: [bookings]
       summary: Create a new booking
-      description: Books a slot for a specific car, week, day and hour. Fails if already taken.
+      description: Books a slot for a specific car, week, day and start time. Fails if already taken.
       requestBody:
         required: true
         content:
@@ -176,20 +176,24 @@ components:
             type: integer
             minimum: 0
             maximum: 6
-        hours:
+        slots:
           type: array
-          description: Hours of the day the school operates (24-hour clock)
+          description: Bookable slot start times (minutes from midnight). Each slot is slotIntervalMinutes long.
           items:
             type: integer
             minimum: 0
-            maximum: 23
+            maximum: 1439
+        slotIntervalMinutes:
+          type: integer
+          description: Duration between consecutive slot start times (e.g. 75 for 1h15m)
         whatsappPhone:
           type: string
           description: WhatsApp contact number used by the school
       required:
         - daysManual
         - daysAutomatic
-        - hours
+        - slots
+        - slotIntervalMinutes
         - whatsappPhone
 
     Availability:
@@ -202,7 +206,7 @@ components:
           format: date
         bookedSlots:
           type: array
-          description: List of slot identifiers in the form "dayOfWeek-hour" that are already booked this week for this car
+          description: List of slot identifiers in the form "dayOfWeek-startMinutes" that are already booked this week for this car
           items:
             type: string
       required:
@@ -228,10 +232,10 @@ components:
           type: integer
           minimum: 0
           maximum: 6
-        hour:
+        startMinutes:
           type: integer
           minimum: 0
-          maximum: 23
+          maximum: 1439
         notes:
           type: string
           nullable: true
@@ -245,7 +249,7 @@ components:
         - phone
         - weekStart
         - dayOfWeek
-        - hour
+        - startMinutes
         - createdAt
 
     CreateBookingRequest:
@@ -268,10 +272,10 @@ components:
           type: integer
           minimum: 0
           maximum: 6
-        hour:
+        startMinutes:
           type: integer
           minimum: 0
-          maximum: 23
+          maximum: 1439
         notes:
           type: string
           maxLength: 500
@@ -281,7 +285,7 @@ components:
         - phone
         - weekStart
         - dayOfWeek
-        - hour
+        - startMinutes
 
     BookingStats:
       type: object
