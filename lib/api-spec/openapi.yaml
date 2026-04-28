@@ -3,13 +3,19 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: Aleajayhi driving school API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: bookings
+    description: Driving lesson bookings
+  - name: schedule
+    description: Weekly availability schedule
+  - name: cars
+    description: Cars used for training
 paths:
   /healthz:
     get:
@@ -24,6 +30,119 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /schedule:
+    get:
+      operationId: getSchedule
+      tags: [schedule]
+      summary: Get the weekly operating schedule
+      description: Returns the days of the week and hours of the day the school operates
+      responses:
+        "200":
+          description: Weekly schedule
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Schedule"
+
+  /availability:
+    get:
+      operationId: getAvailability
+      tags: [bookings]
+      summary: Get availability for a specific week
+      description: Returns booked slot keys for the given week so the UI can lock them
+      parameters:
+        - in: query
+          name: weekStart
+          required: true
+          description: ISO date (YYYY-MM-DD) of the Saturday that starts the week
+          schema:
+            type: string
+            format: date
+      responses:
+        "200":
+          description: Availability info
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Availability"
+
+  /bookings:
+    get:
+      operationId: listBookings
+      tags: [bookings]
+      summary: List all bookings
+      description: Returns all bookings sorted by week and time
+      responses:
+        "200":
+          description: List of bookings
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Booking"
+    post:
+      operationId: createBooking
+      tags: [bookings]
+      summary: Create a new booking
+      description: Books a slot for a specific week, day and hour. Fails if already taken.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateBookingRequest"
+      responses:
+        "201":
+          description: Booking created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Booking"
+        "409":
+          description: Slot already booked
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "400":
+          description: Invalid booking
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /bookings/stats:
+    get:
+      operationId: getBookingStats
+      tags: [bookings]
+      summary: Booking statistics
+      description: Quick stats for the homepage (total bookings, this week, popular times)
+      responses:
+        "200":
+          description: Stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BookingStats"
+
+  /cars:
+    get:
+      operationId: listCars
+      tags: [cars]
+      summary: List training cars
+      description: Returns the cars the school uses for training
+      responses:
+        "200":
+          description: List of cars
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Car"
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +153,164 @@ components:
       required:
         - status
 
+    Schedule:
+      type: object
+      properties:
+        days:
+          type: array
+          description: Day-of-week numbers the school operates (0=Saturday ... 6=Friday in Arab week)
+          items:
+            type: integer
+            minimum: 0
+            maximum: 6
+        hours:
+          type: array
+          description: Hours of the day the school operates (24-hour clock)
+          items:
+            type: integer
+            minimum: 0
+            maximum: 23
+        whatsappPhone:
+          type: string
+          description: WhatsApp contact number used by the school
+      required:
+        - days
+        - hours
+        - whatsappPhone
+
+    Availability:
+      type: object
+      properties:
+        weekStart:
+          type: string
+          format: date
+        bookedSlots:
+          type: array
+          description: List of slot identifiers in the form "dayOfWeek-hour" that are already booked this week
+          items:
+            type: string
+      required:
+        - weekStart
+        - bookedSlots
+
+    Booking:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        phone:
+          type: string
+        weekStart:
+          type: string
+          format: date
+        dayOfWeek:
+          type: integer
+          minimum: 0
+          maximum: 6
+        hour:
+          type: integer
+          minimum: 0
+          maximum: 23
+        notes:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - name
+        - phone
+        - weekStart
+        - dayOfWeek
+        - hour
+        - createdAt
+
+    CreateBookingRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 2
+          maxLength: 80
+        phone:
+          type: string
+          minLength: 6
+          maxLength: 20
+        weekStart:
+          type: string
+          format: date
+        dayOfWeek:
+          type: integer
+          minimum: 0
+          maximum: 6
+        hour:
+          type: integer
+          minimum: 0
+          maximum: 23
+        notes:
+          type: string
+          maxLength: 500
+      required:
+        - name
+        - phone
+        - weekStart
+        - dayOfWeek
+        - hour
+
+    BookingStats:
+      type: object
+      properties:
+        totalBookings:
+          type: integer
+        thisWeekBookings:
+          type: integer
+        nextAvailableSlot:
+          type: string
+          nullable: true
+          description: A friendly description of the next available slot
+        popularDay:
+          type: integer
+          nullable: true
+          minimum: 0
+          maximum: 6
+      required:
+        - totalBookings
+        - thisWeekBookings
+
+    Car:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        model:
+          type: string
+        transmission:
+          type: string
+          enum: [manual, automatic]
+        imageUrl:
+          type: string
+        description:
+          type: string
+      required:
+        - id
+        - name
+        - model
+        - transmission
+        - imageUrl
+        - description
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+      required:
+        - error
+        - message
