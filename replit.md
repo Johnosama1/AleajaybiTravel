@@ -28,14 +28,21 @@ lib/
 
 ## Development Workflows
 
-- **Start application** (webview, port 5000): Runs the Vite dev server for the frontend
-- **Backend API** (console, port 3001): Builds and starts the Express API server
+- **Start application** (webview, port 5000): Builds Vite frontend then starts Express backend on port 5000. Express serves the compiled static frontend files AND the API under `/api`. This is the primary workflow visible in the preview pane.
+- **Backend API** (console, port 3001): Builds and starts the Express API server in dev mode (API only, no static files).
+
+### Serving Architecture
+
+The Express backend (`artifacts/api-server/src/app.ts`) detects the compiled frontend at `artifacts/aleajayhi/dist/public/` and:
+1. Serves static files from that directory
+2. Falls back to `index.html` for all non-API routes (SPA routing)
+
+This allows a single server on port 5000 to serve both the frontend and the API, which is required for Replit's preview pane (port 5000 → external port 80).
 
 ### Environment Variables
 
 - `PORT` - Required for both frontend and backend
 - `BASE_PATH` - Required for frontend (`/`)
-- `API_PROXY_TARGET` - Frontend proxy target for API calls (defaults to `http://localhost:3001`)
 - `DATABASE_URL` / `PG*` - PostgreSQL connection (set by Replit database provisioning)
 
 ## Database Schema
