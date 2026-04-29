@@ -83,6 +83,21 @@ Optional environment variables (defaults provided in `pricing.ts`):
 - `VODAFONE_CASH_NUMBER` — defaults to `01017979651`
 - `INSTAPAY_HANDLE` — defaults to `aleajaybi@instapay`
 
+## WhatsApp Auto-Notification (Twilio)
+
+Automatic WhatsApp sending to the instructor is built and ready. It triggers on:
+1. `POST /api/payment-webhook` — called by any payment provider with `{ bookingId, status: "success", transactionId, method, amount }`
+2. `POST /api/admin/bookings/:id/confirm` — when admin manually confirms a payment
+
+To activate, add these three secrets (Settings → Secrets):
+- `TWILIO_ACCOUNT_SID` — from console.twilio.com (starts with AC...)
+- `TWILIO_AUTH_TOKEN` — from console.twilio.com
+- `TWILIO_WHATSAPP_FROM` — your Twilio WhatsApp sender (e.g. `whatsapp:+14155238886`)
+
+Without these secrets, the system logs a warning and skips sending — everything else continues to work normally.
+
+The WhatsApp message sent includes: name, phone, day, time, sessions, amount, payment method, transaction ID, and car type.
+
 ## Deployment
 
 Configured as `autoscale` deployment. Build step compiles both frontend and backend; run command starts the API server in production mode.
