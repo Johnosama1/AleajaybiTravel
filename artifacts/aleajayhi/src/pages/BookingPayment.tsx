@@ -22,6 +22,7 @@ import {
   getGetBookingQueryKey,
   useGetBooking,
   useGetPricing,
+  useListCars,
   useSubmitBookingPayment,
   type Booking,
   type SubmitPaymentRequest,
@@ -73,6 +74,7 @@ export default function BookingPayment() {
   const validId = Number.isFinite(id) && id > 0;
 
   const { data: pricing } = useGetPricing();
+  const { data: cars } = useListCars();
   const { data: booking, isLoading } = useGetBooking(id, {
     query: {
       queryKey: getGetBookingQueryKey(id),
@@ -187,9 +189,11 @@ export default function BookingPayment() {
 
   const submitted = booking.paymentStatus === "submitted";
 
+  const car = cars?.find((c) => c.id === booking.carId) ?? null;
+
   return (
     <PaymentShell>
-      <BookingSummary booking={booking} bookingDate={bookingDate} />
+      <BookingSummary booking={booking} bookingDate={bookingDate} car={car} />
 
       {submitted ? (
         <SubmittedCard booking={booking} />
@@ -373,10 +377,16 @@ function PaymentShell({ children }: { children: React.ReactNode }) {
 function BookingSummary({
   booking,
   bookingDate,
+  car,
 }: {
   booking: Booking;
   bookingDate: Date | null;
+  car: { name: string; transmission: string } | null;
 }) {
+  const carLabel = car
+    ? `${car.name} (${car.transmission === "automatic" ? "أوتوماتيك" : "مانيوال"})`
+    : null;
+
   return (
     <div
       className="rounded-3xl border border-border bg-card/70 p-5 sm:p-6"
@@ -398,6 +408,13 @@ function BookingSummary({
         <dd className="font-bold text-right" dir="ltr">
           {booking.phone}
         </dd>
+
+        {carLabel && (
+          <>
+            <dt className="text-muted-foreground">نوع السيارة</dt>
+            <dd className="font-bold text-right">🚗 {carLabel}</dd>
+          </>
+        )}
 
         <dt className="text-muted-foreground">اليوم</dt>
         <dd className="font-bold text-right">

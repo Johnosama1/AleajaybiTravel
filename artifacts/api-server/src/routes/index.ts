@@ -5,6 +5,7 @@ import bookingsRouter from "./bookings";
 import carsRouter from "./cars";
 import pricingRouter from "./pricing";
 import adminRouter from "./admin";
+import webhookRouter from "./webhook";
 
 const router: IRouter = Router();
 
@@ -14,5 +15,6 @@ router.use(scheduleRouter);
 router.use(bookingsRouter);
 router.use(carsRouter);
 router.use(adminRouter);
+router.use(webhookRouter);
 
 export default router;

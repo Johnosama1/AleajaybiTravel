@@ -243,6 +243,16 @@ export function CarBookingDialog({
                   className="space-y-4 border-t border-border/60 pt-5"
                 >
                   <div className="space-y-1.5">
+                    <Label>نوع السيارة</Label>
+                    <div className="flex items-center gap-2 rounded-lg border border-border bg-muted/50 px-3 py-2 text-sm font-bold text-foreground">
+                      🚗 {car.name}{" "}
+                      <span className="text-muted-foreground font-normal">
+                        ({car.transmission === "automatic" ? "أوتوماتيك" : "مانيوال"})
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="space-y-1.5">
                     <Label htmlFor="name">الاسم</Label>
                     <Input
                       id="name"

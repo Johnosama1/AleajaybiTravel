@@ -1,8 +1,12 @@
 import { Router, type IRouter, type Request, type Response, type NextFunction } from "express";
 import { asc, eq } from "drizzle-orm";
 import { z } from "zod";
-import { db, bookingsTable } from "@workspace/db";
+import { db, bookingsTable, carsTable } from "@workspace/db";
 import { serializeBooking, buildTrainerWhatsappUrl } from "./bookings.js";
+import { sendWhatsAppToInstructor, buildPaymentWhatsAppMessage } from "../lib/whatsapp.js";
+import { logger } from "../lib/logger.js";
+
+const DAY_NAMES_AR = ["السبت","الأحد","الإثنين","الثلاثاء","الأربعاء","الخميس","الجمعة"];
 
 const ADMIN_TOKEN = process.env["ADMIN_TOKEN"];
 
@@ -95,6 +99,35 @@ router.post("/admin/bookings/:id/confirm", requireAdmin, (req, res, next) => {
       });
       return;
     }
+
+    const [car] = await db
+      .select()
+      .from(carsTable)
+      .where(eq(carsTable.id, updated.carId))
+      .limit(1);
+
+    const dayLabel = DAY_NAMES_AR[updated.dayOfWeek] ?? `يوم ${updated.dayOfWeek}`;
+    const hh = Math.floor(updated.startMinutes / 60).toString().padStart(2, "0");
+    const mm = (updated.startMinutes % 60).toString().padStart(2, "0");
+    const transmissionLabel = car?.transmission === "automatic" ? "أوتوماتيك" : "مانيوال";
+    const carType = car ? `${car.name} (${transmissionLabel})` : "غير محدد";
+
+    const message = buildPaymentWhatsAppMessage({
+      name: updated.name,
+      phone: updated.phone,
+      day: dayLabel,
+      time: `${hh}:${mm}`,
+      sessions: updated.sessionsCount,
+      amount: updated.priceEgp,
+      method: updated.paymentMethod ?? "vodafone_cash",
+      transactionId: updated.paymentReference ?? "-",
+      carType,
+    });
+
+    sendWhatsAppToInstructor(message).catch((err) => {
+      logger.error({ err, bookingId: id }, "Failed to send WhatsApp on admin confirm");
+    });
+
     res.json({
       booking: serializeBooking(updated),
       whatsappUrl: buildTrainerWhatsappUrl(updated),
