@@ -50,6 +50,27 @@ lib/
 - Admin dashboard: trainer portal to review/confirm/reject bookings
 - WhatsApp notifications for booking status updates
 
+## Admin Access
+
+The admin dashboard is accessible at `/admin`. It requires an `ADMIN_TOKEN` environment variable to be set on the server. The token is submitted via the login page and sent as `x-admin-token` header in subsequent requests.
+
+- **Admin token env var**: `ADMIN_TOKEN` (set in shared environment secrets)
+- **Admin login**: Available at the `/admin` route in the frontend
+
+## Car Data
+
+Cars are seeded in the database:
+- **Car 1**: نيسان صني (Nissan Sunny) — Manual — `/cars/nissan-sunny.jpg`
+- **Car 2**: فيات 128 (Fiat 128) — Automatic — `/cars/fiat-128.jpg`
+
+Car images are stored in `artifacts/aleajayhi/public/cars/` and referenced via URL paths.
+
+## Payment Configuration
+
+Optional environment variables (defaults provided in `pricing.ts`):
+- `VODAFONE_CASH_NUMBER` — defaults to `01099399666`
+- `INSTAPAY_HANDLE` — defaults to `aleajaybi@instapay`
+
 ## Deployment
 
 Configured as `autoscale` deployment. Build step compiles both frontend and backend; run command starts the API server in production mode.
