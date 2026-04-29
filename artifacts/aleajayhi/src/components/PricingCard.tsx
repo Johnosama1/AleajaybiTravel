@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { CheckCircle2, GraduationCap } from "lucide-react";
+import { GraduationCap } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useGetPricing } from "@workspace/api-client-react";
 
@@ -75,22 +75,19 @@ export function PricingCard({
           حصص تدريب عملي
         </p>
 
-        <ul className="w-full space-y-2 text-sm text-right pt-2 border-t border-border/50 mt-2">
-          {[
-            `${pricing.sessionsCount} حصص تدريب مع مدرب معتمد`,
-            "اختيار السيارة (مانيوال أو أوتوماتيك)",
-            "حجز ومتابعة المواعيد أونلاين",
-            "دفع آمن: Vodafone Cash أو InstaPay",
-          ].map((feature) => (
-            <li
-              key={feature}
-              className="flex items-start gap-2 text-foreground/90"
-            >
-              <CheckCircle2 className="h-5 w-5 text-primary shrink-0 mt-0.5" />
-              <span>{feature}</span>
-            </li>
-          ))}
-        </ul>
+        <div className="w-full pt-2 border-t border-border/50 mt-2 space-y-2">
+          <p className="text-xs text-muted-foreground text-center">طرق الدفع المتاحة</p>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="flex flex-col items-center justify-center gap-1.5 rounded-2xl border-2 border-red-500/40 bg-red-500/5 p-3">
+              <span className="text-2xl font-black text-red-600 dark:text-red-400 leading-none">V</span>
+              <span className="text-xs font-extrabold text-red-600 dark:text-red-400">Vodafone Cash</span>
+            </div>
+            <div className="flex flex-col items-center justify-center gap-1.5 rounded-2xl border-2 border-violet-500/40 bg-violet-500/5 p-3">
+              <span className="text-2xl font-black text-violet-600 dark:text-violet-400 leading-none">i</span>
+              <span className="text-xs font-extrabold text-violet-600 dark:text-violet-400">InstaPay</span>
+            </div>
+          </div>
+        </div>
       </div>
     </motion.div>
   );
