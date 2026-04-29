@@ -59,16 +59,21 @@ The admin dashboard is accessible at `/admin`. It requires an `ADMIN_TOKEN` envi
 
 ## Car Data
 
-Cars are seeded in the database:
-- **Car 1**: نيسان صني (Nissan Sunny) — Manual — `/cars/nissan-sunny.jpg`
+Cars are seeded in the database. Run the seed script if the DB is fresh:
+```bash
+pnpm --filter @workspace/db run seed
+```
+
+- **Car 1**: نيسان صاني (Nissan Sunny) — Manual — `/cars/nissan-sunny.jpg`
 - **Car 2**: فيات 128 (Fiat 128) — Automatic — `/cars/fiat-128.jpg`
 
 Car images are stored in `artifacts/aleajayhi/public/cars/` and referenced via URL paths.
+Source images are in `attached_assets/` and imported via the `@assets` Vite alias.
 
 ## Payment Configuration
 
 Optional environment variables (defaults provided in `pricing.ts`):
-- `VODAFONE_CASH_NUMBER` — defaults to `01099399666`
+- `VODAFONE_CASH_NUMBER` — defaults to `01017979651`
 - `INSTAPAY_HANDLE` — defaults to `aleajaybi@instapay`
 
 ## Deployment
