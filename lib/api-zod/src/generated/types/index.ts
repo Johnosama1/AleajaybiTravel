@@ -6,6 +6,9 @@
  * OpenAPI spec version: 0.1.0
  */
 
+export * from "./adminConfirmResult";
+export * from "./adminLoginRequest";
+export * from "./adminLoginResult";
 export * from "./availability";
 export * from "./booking";
 export * from "./bookingStats";
@@ -15,4 +18,8 @@ export * from "./createBookingRequest";
 export * from "./errorResponse";
 export * from "./getAvailabilityParams";
 export * from "./healthStatus";
+export * from "./paymentMethod";
+export * from "./paymentStatus";
+export * from "./pricing";
 export * from "./schedule";
+export * from "./submitPaymentRequest";

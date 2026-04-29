@@ -5,6 +5,8 @@
  * Aleajaybi Travel driving school API
  * OpenAPI spec version: 0.1.0
  */
+import type { PaymentMethod } from "./paymentMethod";
+import type { PaymentStatus } from "./paymentStatus";
 
 export interface Booking {
   id: number;
@@ -23,5 +25,11 @@ export interface Booking {
    */
   startMinutes: number;
   notes?: string | null;
+  priceEgp: number;
+  sessionsCount: number;
+  paymentStatus: PaymentStatus;
+  paymentMethod?: PaymentMethod | null;
+  paymentReference?: string | null;
+  paidAt?: Date | null;
   createdAt: Date;
 }

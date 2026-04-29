@@ -1,0 +1,447 @@
+import { useEffect, useMemo, useState } from "react";
+import { useRoute, Link, useLocation } from "wouter";
+import { motion, AnimatePresence } from "framer-motion";
+import {
+  ArrowLeft,
+  CheckCircle2,
+  Clock3,
+  Copy,
+  Loader2,
+  ShieldCheck,
+} from "lucide-react";
+import { Header } from "@/components/layout/Header";
+import { Footer } from "@/components/layout/Footer";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import {
+  getGetBookingQueryKey,
+  useGetBooking,
+  useGetPricing,
+  useSubmitBookingPayment,
+  type Booking,
+  type SubmitPaymentRequest,
+} from "@workspace/api-client-react";
+import { ARABIC_DAYS, formatMinutes, formatArabicDate } from "@/lib/date";
+import { useToast } from "@/hooks/use-toast";
+
+type Method = SubmitPaymentRequest["method"];
+
+function copyToClipboard(text: string) {
+  if (navigator.clipboard) {
+    return navigator.clipboard.writeText(text);
+  }
+  return Promise.resolve();
+}
+
+export default function BookingPayment() {
+  const [, params] = useRoute<{ id: string }>("/booking/:id");
+  const [, setLocation] = useLocation();
+  const { toast } = useToast();
+
+  const id = Number(params?.id);
+  const validId = Number.isFinite(id) && id > 0;
+
+  const { data: pricing } = useGetPricing();
+  const { data: booking, isLoading } = useGetBooking(id, {
+    query: {
+      queryKey: getGetBookingQueryKey(id),
+      enabled: validId,
+      refetchInterval: (q) =>
+        q.state.data?.paymentStatus === "paid" ? false : 4000,
+    },
+  });
+
+  const submitPaymentMutation = useSubmitBookingPayment();
+
+  const [method, setMethod] = useState<Method>("vodafone_cash");
+  const [reference, setReference] = useState("");
+
+  useEffect(() => {
+    if (booking?.paymentMethod) {
+      setMethod(booking.paymentMethod);
+    }
+  }, [booking?.paymentMethod]);
+
+  const bookingDate = useMemo(() => {
+    if (!booking) return null;
+    const d = new Date(`${booking.weekStart}T00:00:00`);
+    d.setDate(d.getDate() + booking.dayOfWeek);
+    return d;
+  }, [booking]);
+
+  if (!validId) {
+    return (
+      <PaymentShell>
+        <NotFoundCard />
+      </PaymentShell>
+    );
+  }
+
+  if (isLoading || !booking) {
+    return (
+      <PaymentShell>
+        <div className="flex items-center justify-center py-20">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      </PaymentShell>
+    );
+  }
+
+  if (booking.paymentStatus === "paid") {
+    return (
+      <PaymentShell>
+        <PaidCard booking={booking} bookingDate={bookingDate} />
+      </PaymentShell>
+    );
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!reference || reference.trim().length < 4) {
+      toast({
+        title: "بيانات ناقصة",
+        description: "أدخل رقم العملية كما يظهر في رسالة التحويل.",
+        variant: "destructive",
+      });
+      return;
+    }
+    try {
+      await submitPaymentMutation.mutateAsync({
+        id,
+        data: { method, reference: reference.trim() },
+      });
+      toast({
+        title: "تم استلام بيانات الدفع",
+        description: "سيتم تأكيد الحجز فور مراجعة المبلغ.",
+      });
+    } catch (error: unknown) {
+      const msg =
+        (error as { message?: string })?.message ||
+        "تعذر إرسال بيانات الدفع.";
+      toast({
+        title: "حدث خطأ",
+        description: msg,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const submitted = booking.paymentStatus === "submitted";
+
+  return (
+    <PaymentShell>
+      <BookingSummary booking={booking} bookingDate={bookingDate} />
+
+      {submitted ? (
+        <SubmittedCard booking={booking} />
+      ) : (
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="rounded-3xl border border-border bg-card p-5 sm:p-7 space-y-5"
+          data-testid="card-payment-instructions"
+        >
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <h2 className="text-xl sm:text-2xl font-extrabold">
+              ادفع{" "}
+              <span className="text-primary">
+                {booking.priceEgp} ج.م
+              </span>{" "}
+              لتأكيد الحجز
+            </h2>
+            <Badge className="bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30 font-bold gap-1">
+              <Clock3 className="h-3.5 w-3.5" />
+              في انتظار الدفع
+            </Badge>
+          </div>
+
+          <Tabs value={method} onValueChange={(v) => setMethod(v as Method)}>
+            <TabsList className="grid grid-cols-2 w-full">
+              <TabsTrigger
+                value="vodafone_cash"
+                data-testid="tab-vodafone-cash"
+                className="font-extrabold"
+              >
+                Vodafone Cash
+              </TabsTrigger>
+              <TabsTrigger
+                value="instapay"
+                data-testid="tab-instapay"
+                className="font-extrabold"
+              >
+                InstaPay
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="vodafone_cash" className="mt-4">
+              <PaymentTargetRow
+                label="حوّل المبلغ إلى رقم محفظة فودافون كاش:"
+                value={pricing?.vodafoneCashNumber ?? "—"}
+                testId="text-vodafone-number"
+              />
+            </TabsContent>
+
+            <TabsContent value="instapay" className="mt-4">
+              <PaymentTargetRow
+                label="حوّل المبلغ إلى عنوان InstaPay التالي:"
+                value={pricing?.instapayHandle ?? "—"}
+                testId="text-instapay-handle"
+              />
+            </TabsContent>
+          </Tabs>
+
+          <ol className="text-sm text-muted-foreground space-y-1.5 list-decimal pr-5">
+            <li>حوّل {booking.priceEgp} ج.م بالضبط إلى الرقم/العنوان أعلاه.</li>
+            <li>هتوصلك رسالة تأكيد فيها رقم العملية (Transaction ID).</li>
+            <li>
+              اكتب رقم العملية في الخانة بالأسفل واضغط <b>إرسال</b>.
+            </li>
+            <li>الموقع هيراجع التحويل ويأكدلك الحجز تلقائيًا.</li>
+          </ol>
+
+          <form onSubmit={handleSubmit} className="space-y-3 pt-1">
+            <div className="space-y-1.5">
+              <Label htmlFor="reference">رقم العملية / المرجع</Label>
+              <Input
+                id="reference"
+                value={reference}
+                onChange={(e) => setReference(e.target.value)}
+                placeholder="مثال: 123456789"
+                dir="ltr"
+                required
+                data-testid="input-payment-reference"
+              />
+            </div>
+
+            <Button
+              type="submit"
+              size="lg"
+              className="w-full h-12 font-extrabold"
+              disabled={submitPaymentMutation.isPending}
+              data-testid="button-submit-payment"
+            >
+              {submitPaymentMutation.isPending ? (
+                <>
+                  <Loader2 className="h-5 w-5 animate-spin ml-2" />
+                  جاري الإرسال...
+                </>
+              ) : (
+                <>إرسال بيانات الدفع</>
+              )}
+            </Button>
+          </form>
+
+          <div className="flex items-start gap-2 text-xs text-muted-foreground border-t border-border/60 pt-4">
+            <ShieldCheck className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+            <span>
+              بياناتك آمنة. لن يتم تأكيد الحجز إلا بعد التحقق من استلام المبلغ.
+            </span>
+          </div>
+        </motion.div>
+      )}
+
+      <div className="text-center pt-2">
+        <Button asChild variant="ghost" size="sm">
+          <Link href="/" data-testid="link-back-home">
+            <ArrowLeft className="h-4 w-4 ml-2" />
+            رجوع للرئيسية
+          </Link>
+        </Button>
+      </div>
+    </PaymentShell>
+  );
+}
+
+function PaymentShell({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="flex min-h-screen flex-col bg-background text-foreground">
+      <Header />
+      <main className="flex-1 py-6 sm:py-10">
+        <div className="container max-w-2xl space-y-5">{children}</div>
+      </main>
+      <Footer />
+    </div>
+  );
+}
+
+function BookingSummary({
+  booking,
+  bookingDate,
+}: {
+  booking: Booking;
+  bookingDate: Date | null;
+}) {
+  return (
+    <div
+      className="rounded-3xl border border-border bg-card/70 p-5 sm:p-6"
+      data-testid="card-booking-summary"
+    >
+      <div className="flex items-center justify-between gap-3 mb-3">
+        <h1 className="text-lg sm:text-xl font-extrabold text-primary">
+          ملخص الحجز #{booking.id}
+        </h1>
+        <Badge variant="secondary" className="font-bold">
+          {booking.sessionsCount} حصص
+        </Badge>
+      </div>
+      <dl className="grid grid-cols-2 gap-y-2 gap-x-4 text-sm">
+        <dt className="text-muted-foreground">الاسم</dt>
+        <dd className="font-bold text-right">{booking.name}</dd>
+
+        <dt className="text-muted-foreground">رقم الواتساب</dt>
+        <dd className="font-bold text-right" dir="ltr">
+          {booking.phone}
+        </dd>
+
+        <dt className="text-muted-foreground">اليوم</dt>
+        <dd className="font-bold text-right">
+          {ARABIC_DAYS[booking.dayOfWeek]}{" "}
+          {bookingDate ? formatArabicDate(bookingDate) : ""}
+        </dd>
+
+        <dt className="text-muted-foreground">الموعد</dt>
+        <dd className="font-bold text-right" dir="ltr">
+          {formatMinutes(booking.startMinutes)}
+        </dd>
+
+        <dt className="text-muted-foreground">المبلغ</dt>
+        <dd className="font-extrabold text-right text-primary">
+          {booking.priceEgp} ج.م
+        </dd>
+      </dl>
+    </div>
+  );
+}
+
+function PaymentTargetRow({
+  label,
+  value,
+  testId,
+}: {
+  label: string;
+  value: string;
+  testId: string;
+}) {
+  const { toast } = useToast();
+  return (
+    <div className="space-y-2">
+      <p className="text-sm text-muted-foreground">{label}</p>
+      <div className="flex items-center gap-2 rounded-2xl border-2 border-primary/40 bg-primary/5 p-3">
+        <code
+          className="flex-1 text-lg font-extrabold text-primary tracking-wide"
+          dir="ltr"
+          data-testid={testId}
+        >
+          {value}
+        </code>
+        <Button
+          type="button"
+          size="sm"
+          variant="secondary"
+          onClick={async () => {
+            await copyToClipboard(value);
+            toast({ title: "تم النسخ" });
+          }}
+          data-testid={`button-copy-${testId}`}
+        >
+          <Copy className="h-4 w-4 ml-1" />
+          نسخ
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+function SubmittedCard({ booking }: { booking: Booking }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="rounded-3xl border-2 border-amber-500/40 bg-amber-500/5 p-6 text-center space-y-3"
+      data-testid="card-payment-submitted"
+    >
+      <div className="w-14 h-14 mx-auto rounded-full bg-amber-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center">
+        <Loader2 className="h-7 w-7 animate-spin" />
+      </div>
+      <h2 className="text-xl font-extrabold">جارٍ التحقق من الدفع...</h2>
+      <p className="text-sm text-muted-foreground">
+        استلمنا رقم العملية{" "}
+        <code dir="ltr" className="text-foreground font-bold">
+          {booking.paymentReference}
+        </code>{" "}
+        — هذه الصفحة هتتحدّث تلقائيًا فور تأكيد المبلغ.
+      </p>
+    </motion.div>
+  );
+}
+
+function PaidCard({
+  booking,
+  bookingDate,
+}: {
+  booking: Booking;
+  bookingDate: Date | null;
+}) {
+  return (
+    <AnimatePresence>
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="rounded-3xl border-2 border-green-500/50 bg-green-500/5 p-6 sm:p-8 text-center space-y-4"
+        data-testid="card-payment-paid"
+      >
+        <div className="w-16 h-16 mx-auto rounded-full bg-green-500/20 text-green-500 flex items-center justify-center">
+          <CheckCircle2 className="h-10 w-10" />
+        </div>
+        <h2 className="text-2xl sm:text-3xl font-extrabold">
+          تم تأكيد الحجز ✅
+        </h2>
+        <p className="text-muted-foreground">
+          شكرًا{" "}
+          <span className="font-extrabold text-foreground">{booking.name}</span>
+          ! استلمنا مبلغ <b>{booking.priceEgp} ج.م</b> وتم تأكيد كورس{" "}
+          <b>{booking.sessionsCount} حصص</b>.
+        </p>
+        <div className="rounded-2xl bg-card border border-border p-4 text-sm text-right space-y-2">
+          <div className="flex justify-between gap-3">
+            <span className="text-muted-foreground">رقم الحجز</span>
+            <span className="font-extrabold">#{booking.id}</span>
+          </div>
+          <div className="flex justify-between gap-3">
+            <span className="text-muted-foreground">الموعد</span>
+            <span className="font-extrabold">
+              {ARABIC_DAYS[booking.dayOfWeek]}{" "}
+              {bookingDate ? formatArabicDate(bookingDate) : ""} —{" "}
+              <span dir="ltr">{formatMinutes(booking.startMinutes)}</span>
+            </span>
+          </div>
+        </div>
+        <p className="text-sm text-muted-foreground">
+          المدرب اتبلّغ بالحجز على الواتساب — هيتواصل معاك قبل الموعد بفترة.
+        </p>
+        <Button asChild size="lg" className="font-extrabold">
+          <Link href="/" data-testid="link-paid-home">
+            رجوع للرئيسية
+          </Link>
+        </Button>
+      </motion.div>
+    </AnimatePresence>
+  );
+}
+
+function NotFoundCard() {
+  return (
+    <div className="rounded-3xl border border-border bg-card p-8 text-center space-y-3">
+      <h1 className="text-xl font-extrabold">رقم الحجز غير صحيح</h1>
+      <p className="text-muted-foreground text-sm">
+        لم نتمكن من العثور على هذا الحجز.
+      </p>
+      <Button asChild>
+        <Link href="/">العودة للرئيسية</Link>
+      </Button>
+    </div>
+  );
+}

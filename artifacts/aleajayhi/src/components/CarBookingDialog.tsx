@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Dialog,
@@ -9,7 +10,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Loader2, CheckCircle2, ChevronRight } from "lucide-react";
+import { Loader2, ChevronRight } from "lucide-react";
 import {
   useGetSchedule,
   useGetAvailability,
@@ -29,6 +30,7 @@ import {
   formatArabicDate,
 } from "@/lib/date";
 import { useToast } from "@/hooks/use-toast";
+import { PricingCard } from "@/components/PricingCard";
 
 interface CarBookingDialogProps {
   car: Car | null;
@@ -43,6 +45,7 @@ export function CarBookingDialog({
 }: CarBookingDialogProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [, setLocation] = useLocation();
 
   const weekSaturday = useMemo(() => getSaturdayOfWeek(new Date()), []);
   const weekStartString = formatDateToYYYYMMDD(weekSaturday);
@@ -51,7 +54,6 @@ export function CarBookingDialog({
   const [selectedSlot, setSelectedSlot] = useState<number | null>(null);
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
-  const [bookingSuccess, setBookingSuccess] = useState(false);
 
   useEffect(() => {
     if (open) {
@@ -59,7 +61,6 @@ export function CarBookingDialog({
       setSelectedSlot(null);
       setName("");
       setPhone("");
-      setBookingSuccess(false);
     }
   }, [open, car?.id]);
 
@@ -117,7 +118,7 @@ export function CarBookingDialog({
     }
 
     try {
-      await createBookingMutation.mutateAsync({
+      const created = await createBookingMutation.mutateAsync({
         data: {
           carId: car.id,
           name: name.trim(),
@@ -141,18 +142,8 @@ export function CarBookingDialog({
         queryKey: getListBookingsQueryKey(),
       });
 
-      setBookingSuccess(true);
-
-      const schoolPhone = schedule?.whatsappPhone || "201099399666";
-      const bookingDate = addDays(weekSaturday, selectedDay);
-      const message = `حجز جديد - ${car.name}
-${ARABIC_DAYS[selectedDay]} ${formatArabicDate(bookingDate)}
-الساعة ${formatMinutes(selectedSlot)}
-الاسم: ${name}
-الموبايل: ${phone}`;
-
-      const waUrl = `https://wa.me/${schoolPhone}?text=${encodeURIComponent(message)}`;
-      window.open(waUrl, "_blank");
+      onOpenChange(false);
+      setLocation(`/booking/${created.id}`);
     } catch (error: unknown) {
       const msg =
         (error as { message?: string })?.message ||
@@ -180,39 +171,14 @@ ${ARABIC_DAYS[selectedDay]} ${formatArabicDate(bookingDate)}
         </DialogHeader>
 
         <AnimatePresence mode="wait">
-          {bookingSuccess ? (
-            <motion.div
-              key="success"
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0 }}
-              className="p-8 text-center flex flex-col items-center gap-4"
-              data-testid="card-booking-success"
-            >
-              <div className="w-16 h-16 bg-green-500/15 text-green-500 rounded-full flex items-center justify-center">
-                <CheckCircle2 className="w-10 h-10" />
-              </div>
-              <h3 className="text-2xl font-extrabold">تم الحجز بنجاح!</h3>
-              <p className="text-muted-foreground max-w-md">
-                لو واتساب لم يفتح تلقائيًا، تواصل معنا مباشرة لتأكيد الحجز.
-              </p>
-              <Button
-                onClick={() => onOpenChange(false)}
-                size="lg"
-                className="font-bold mt-2"
-                data-testid="button-close-success"
-              >
-                تمام
-              </Button>
-            </motion.div>
-          ) : (
-            <motion.div
-              key="form"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="p-5 sm:p-6 space-y-5"
-            >
+          <motion.div
+            key="form"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="p-5 sm:p-6 space-y-5"
+          >
+            <PricingCard variant="compact" />
               {availabilityLoading ? (
                 <div className="py-10 flex items-center justify-center text-primary">
                   <Loader2 className="h-6 w-6 animate-spin" />
@@ -315,15 +281,17 @@ ${ARABIC_DAYS[selectedDay]} ${formatArabicDate(bookingDate)}
                       </>
                     ) : (
                       <>
-                        تأكيد الحجز عبر واتساب
+                        احجز وادفع
                         <ChevronRight className="h-5 w-5" />
                       </>
                     )}
                   </Button>
+                  <p className="text-xs text-center text-muted-foreground">
+                    بعد الضغط هتنتقل لصفحة الدفع لتأكيد الحجز.
+                  </p>
                 </motion.form>
               )}
-            </motion.div>
-          )}
+          </motion.div>
         </AnimatePresence>
       </DialogContent>
     </Dialog>

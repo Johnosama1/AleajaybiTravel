@@ -3,6 +3,7 @@ import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { WhatsAppButton } from "@/components/WhatsAppButton";
 import { CarBookingDialog } from "@/components/CarBookingDialog";
+import { PricingCard } from "@/components/PricingCard";
 import {
   useListCars,
   useGetBookingStats,
@@ -122,6 +123,21 @@ export default function Home() {
                 </div>
               </motion.div>
             )}
+          </div>
+        </section>
+
+        {/* PRICING */}
+        <section id="pricing" className="py-10 sm:py-14">
+          <div className="container max-w-2xl">
+            <div className="text-center max-w-xl mx-auto mb-6 sm:mb-8">
+              <h2 className="text-2xl sm:text-3xl font-extrabold mb-3">
+                <span className="text-primary">سعر بسيط</span> وكورس متكامل
+              </h2>
+              <p className="text-muted-foreground text-sm sm:text-base">
+                باقة واحدة شاملة، بدون رسوم خفية.
+              </p>
+            </div>
+            <PricingCard />
           </div>
         </section>
 

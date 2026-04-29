@@ -16,6 +16,26 @@ export const HealthCheckResponse = zod.object({
 });
 
 /**
+ * Returns the course price and session count
+ * @summary Get the course pricing
+ */
+export const GetPricingResponse = zod.object({
+  priceEgp: zod
+    .number()
+    .describe("Price for the full course in Egyptian Pounds"),
+  sessionsCount: zod
+    .number()
+    .describe("Number of sessions included in the course"),
+  currency: zod.string().describe("ISO 4217 currency code"),
+  vodafoneCashNumber: zod
+    .string()
+    .describe("Vodafone Cash wallet number to send the payment to"),
+  instapayHandle: zod
+    .string()
+    .describe("InstaPay handle to send the payment to"),
+});
+
+/**
  * Returns the days of the week (per transmission) and the bookable slots
  * @summary Get the weekly operating schedule
  */
@@ -115,6 +135,16 @@ export const ListBookingsResponseItem = zod.object({
     .min(listBookingsResponseStartMinutesMin)
     .max(listBookingsResponseStartMinutesMax),
   notes: zod.string().nullish(),
+  priceEgp: zod.number(),
+  sessionsCount: zod.number(),
+  paymentStatus: zod
+    .enum(["pending", "submitted", "paid"])
+    .describe(
+      "pending = booking created, no payment info yet\nsubmitted = customer entered payment reference, awaiting trainer review\npaid = trainer confirmed money received\n",
+    ),
+  paymentMethod: zod.enum(["vodafone_cash", "instapay"]).nullish(),
+  paymentReference: zod.string().nullish(),
+  paidAt: zod.coerce.date().nullish(),
   createdAt: zod.coerce.date(),
 });
 export const ListBookingsResponse = zod.array(ListBookingsResponseItem);
@@ -178,6 +208,257 @@ export const GetBookingStatsResponse = zod.object({
     .min(getBookingStatsResponsePopularDayMin)
     .max(getBookingStatsResponsePopularDayMax)
     .nullish(),
+});
+
+/**
+ * Used by the confirmation page to poll payment status
+ * @summary Get a booking by id
+ */
+export const GetBookingParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const getBookingResponseDayOfWeekMin = 0;
+export const getBookingResponseDayOfWeekMax = 6;
+
+export const getBookingResponseStartMinutesMin = 0;
+export const getBookingResponseStartMinutesMax = 1439;
+
+export const GetBookingResponse = zod.object({
+  id: zod.number(),
+  carId: zod.number(),
+  name: zod.string(),
+  phone: zod.string(),
+  weekStart: zod.coerce.date(),
+  dayOfWeek: zod
+    .number()
+    .min(getBookingResponseDayOfWeekMin)
+    .max(getBookingResponseDayOfWeekMax),
+  startMinutes: zod
+    .number()
+    .min(getBookingResponseStartMinutesMin)
+    .max(getBookingResponseStartMinutesMax),
+  notes: zod.string().nullish(),
+  priceEgp: zod.number(),
+  sessionsCount: zod.number(),
+  paymentStatus: zod
+    .enum(["pending", "submitted", "paid"])
+    .describe(
+      "pending = booking created, no payment info yet\nsubmitted = customer entered payment reference, awaiting trainer review\npaid = trainer confirmed money received\n",
+    ),
+  paymentMethod: zod.enum(["vodafone_cash", "instapay"]).nullish(),
+  paymentReference: zod.string().nullish(),
+  paidAt: zod.coerce.date().nullish(),
+  createdAt: zod.coerce.date(),
+});
+
+/**
+ * Customer submits the payment method and transaction reference. Booking moves to "submitted" until the trainer confirms it.
+ * @summary Submit payment proof for a booking
+ */
+export const SubmitBookingPaymentParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const submitBookingPaymentBodyReferenceMin = 4;
+export const submitBookingPaymentBodyReferenceMax = 80;
+
+export const SubmitBookingPaymentBody = zod.object({
+  method: zod.enum(["vodafone_cash", "instapay"]),
+  reference: zod
+    .string()
+    .min(submitBookingPaymentBodyReferenceMin)
+    .max(submitBookingPaymentBodyReferenceMax)
+    .describe(
+      "Vodafone Cash \/ InstaPay transaction reference number from the SMS confirmation",
+    ),
+});
+
+export const submitBookingPaymentResponseDayOfWeekMin = 0;
+export const submitBookingPaymentResponseDayOfWeekMax = 6;
+
+export const submitBookingPaymentResponseStartMinutesMin = 0;
+export const submitBookingPaymentResponseStartMinutesMax = 1439;
+
+export const SubmitBookingPaymentResponse = zod.object({
+  id: zod.number(),
+  carId: zod.number(),
+  name: zod.string(),
+  phone: zod.string(),
+  weekStart: zod.coerce.date(),
+  dayOfWeek: zod
+    .number()
+    .min(submitBookingPaymentResponseDayOfWeekMin)
+    .max(submitBookingPaymentResponseDayOfWeekMax),
+  startMinutes: zod
+    .number()
+    .min(submitBookingPaymentResponseStartMinutesMin)
+    .max(submitBookingPaymentResponseStartMinutesMax),
+  notes: zod.string().nullish(),
+  priceEgp: zod.number(),
+  sessionsCount: zod.number(),
+  paymentStatus: zod
+    .enum(["pending", "submitted", "paid"])
+    .describe(
+      "pending = booking created, no payment info yet\nsubmitted = customer entered payment reference, awaiting trainer review\npaid = trainer confirmed money received\n",
+    ),
+  paymentMethod: zod.enum(["vodafone_cash", "instapay"]).nullish(),
+  paymentReference: zod.string().nullish(),
+  paidAt: zod.coerce.date().nullish(),
+  createdAt: zod.coerce.date(),
+});
+
+/**
+ * Returns ok if the supplied token matches the configured ADMIN_TOKEN.
+ * @summary Verify the trainer admin token
+ */
+
+export const AdminLoginBody = zod.object({
+  token: zod.string().min(1),
+});
+
+export const AdminLoginResponse = zod.object({
+  ok: zod.boolean(),
+});
+
+/**
+ * @summary List all bookings for the trainer dashboard
+ */
+export const AdminListBookingsHeader = zod.object({
+  "X-Admin-Token": zod.string(),
+});
+
+export const adminListBookingsResponseDayOfWeekMin = 0;
+export const adminListBookingsResponseDayOfWeekMax = 6;
+
+export const adminListBookingsResponseStartMinutesMin = 0;
+export const adminListBookingsResponseStartMinutesMax = 1439;
+
+export const AdminListBookingsResponseItem = zod.object({
+  id: zod.number(),
+  carId: zod.number(),
+  name: zod.string(),
+  phone: zod.string(),
+  weekStart: zod.coerce.date(),
+  dayOfWeek: zod
+    .number()
+    .min(adminListBookingsResponseDayOfWeekMin)
+    .max(adminListBookingsResponseDayOfWeekMax),
+  startMinutes: zod
+    .number()
+    .min(adminListBookingsResponseStartMinutesMin)
+    .max(adminListBookingsResponseStartMinutesMax),
+  notes: zod.string().nullish(),
+  priceEgp: zod.number(),
+  sessionsCount: zod.number(),
+  paymentStatus: zod
+    .enum(["pending", "submitted", "paid"])
+    .describe(
+      "pending = booking created, no payment info yet\nsubmitted = customer entered payment reference, awaiting trainer review\npaid = trainer confirmed money received\n",
+    ),
+  paymentMethod: zod.enum(["vodafone_cash", "instapay"]).nullish(),
+  paymentReference: zod.string().nullish(),
+  paidAt: zod.coerce.date().nullish(),
+  createdAt: zod.coerce.date(),
+});
+export const AdminListBookingsResponse = zod.array(
+  AdminListBookingsResponseItem,
+);
+
+/**
+ * Marks the booking as paid and returns the wa.me URL the dashboard should open to notify the trainer.
+ * @summary Trainer confirms payment was received
+ */
+export const AdminConfirmBookingParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const AdminConfirmBookingHeader = zod.object({
+  "X-Admin-Token": zod.string(),
+});
+
+export const adminConfirmBookingResponseBookingDayOfWeekMin = 0;
+export const adminConfirmBookingResponseBookingDayOfWeekMax = 6;
+
+export const adminConfirmBookingResponseBookingStartMinutesMin = 0;
+export const adminConfirmBookingResponseBookingStartMinutesMax = 1439;
+
+export const AdminConfirmBookingResponse = zod.object({
+  booking: zod.object({
+    id: zod.number(),
+    carId: zod.number(),
+    name: zod.string(),
+    phone: zod.string(),
+    weekStart: zod.coerce.date(),
+    dayOfWeek: zod
+      .number()
+      .min(adminConfirmBookingResponseBookingDayOfWeekMin)
+      .max(adminConfirmBookingResponseBookingDayOfWeekMax),
+    startMinutes: zod
+      .number()
+      .min(adminConfirmBookingResponseBookingStartMinutesMin)
+      .max(adminConfirmBookingResponseBookingStartMinutesMax),
+    notes: zod.string().nullish(),
+    priceEgp: zod.number(),
+    sessionsCount: zod.number(),
+    paymentStatus: zod
+      .enum(["pending", "submitted", "paid"])
+      .describe(
+        "pending = booking created, no payment info yet\nsubmitted = customer entered payment reference, awaiting trainer review\npaid = trainer confirmed money received\n",
+      ),
+    paymentMethod: zod.enum(["vodafone_cash", "instapay"]).nullish(),
+    paymentReference: zod.string().nullish(),
+    paidAt: zod.coerce.date().nullish(),
+    createdAt: zod.coerce.date(),
+  }),
+  whatsappUrl: zod
+    .string()
+    .describe("wa.me URL the dashboard should open to notify the trainer"),
+});
+
+/**
+ * @summary Trainer rejects an unverified payment
+ */
+export const AdminRejectBookingParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const AdminRejectBookingHeader = zod.object({
+  "X-Admin-Token": zod.string(),
+});
+
+export const adminRejectBookingResponseDayOfWeekMin = 0;
+export const adminRejectBookingResponseDayOfWeekMax = 6;
+
+export const adminRejectBookingResponseStartMinutesMin = 0;
+export const adminRejectBookingResponseStartMinutesMax = 1439;
+
+export const AdminRejectBookingResponse = zod.object({
+  id: zod.number(),
+  carId: zod.number(),
+  name: zod.string(),
+  phone: zod.string(),
+  weekStart: zod.coerce.date(),
+  dayOfWeek: zod
+    .number()
+    .min(adminRejectBookingResponseDayOfWeekMin)
+    .max(adminRejectBookingResponseDayOfWeekMax),
+  startMinutes: zod
+    .number()
+    .min(adminRejectBookingResponseStartMinutesMin)
+    .max(adminRejectBookingResponseStartMinutesMax),
+  notes: zod.string().nullish(),
+  priceEgp: zod.number(),
+  sessionsCount: zod.number(),
+  paymentStatus: zod
+    .enum(["pending", "submitted", "paid"])
+    .describe(
+      "pending = booking created, no payment info yet\nsubmitted = customer entered payment reference, awaiting trainer review\npaid = trainer confirmed money received\n",
+    ),
+  paymentMethod: zod.enum(["vodafone_cash", "instapay"]).nullish(),
+  paymentReference: zod.string().nullish(),
+  paidAt: zod.coerce.date().nullish(),
+  createdAt: zod.coerce.date(),
 });
 
 /**

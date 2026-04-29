@@ -6,7 +6,13 @@ import {
   ListBookingsResponse,
   GetBookingStatsResponse,
 } from "@workspace/api-zod";
-import { DAYS_MANUAL, DAYS_AUTOMATIC, SLOTS } from "./schedule.js";
+import {
+  DAYS_MANUAL,
+  DAYS_AUTOMATIC,
+  SLOTS,
+  WHATSAPP_PHONE,
+} from "./schedule.js";
+import { PRICE_EGP, SESSIONS_COUNT } from "./pricing.js";
 
 const dateString = z
   .string()
@@ -27,6 +33,11 @@ const createBookingBody = z.object({
   notes: z.string().max(500).optional(),
 });
 
+const submitPaymentBody = z.object({
+  method: z.enum(["vodafone_cash", "instapay"]),
+  reference: z.string().min(4).max(80),
+});
+
 const router: IRouter = Router();
 
 function toDateString(d: Date): string {
@@ -40,6 +51,66 @@ function startOfWeekSaturday(date: Date): Date {
   const diff = (day - 6 + 7) % 7;
   d.setUTCDate(d.getUTCDate() - diff);
   return d;
+}
+
+type BookingRow = typeof bookingsTable.$inferSelect;
+
+export function serializeBooking(b: BookingRow) {
+  return {
+    id: b.id,
+    carId: b.carId,
+    name: b.name,
+    phone: b.phone,
+    weekStart: b.weekStart,
+    dayOfWeek: b.dayOfWeek,
+    startMinutes: b.startMinutes,
+    notes: b.notes,
+    priceEgp: b.priceEgp,
+    sessionsCount: b.sessionsCount,
+    paymentStatus: b.paymentStatus as "pending" | "submitted" | "paid",
+    paymentMethod: (b.paymentMethod ?? null) as
+      | "vodafone_cash"
+      | "instapay"
+      | null,
+    paymentReference: b.paymentReference,
+    paidAt: b.paidAt ? b.paidAt.toISOString() : null,
+    createdAt: b.createdAt.toISOString(),
+  };
+}
+
+export function buildTrainerWhatsappUrl(b: BookingRow): string {
+  const dayNamesAr = [
+    "السبت",
+    "الأحد",
+    "الإثنين",
+    "الثلاثاء",
+    "الأربعاء",
+    "الخميس",
+    "الجمعة",
+  ];
+  const day = dayNamesAr[b.dayOfWeek] ?? `يوم ${b.dayOfWeek}`;
+  const hh = Math.floor(b.startMinutes / 60)
+    .toString()
+    .padStart(2, "0");
+  const mm = (b.startMinutes % 60).toString().padStart(2, "0");
+  const lines = [
+    "🚗 *حجز جديد مدفوع — Aleajaybi Travel*",
+    "",
+    `👤 الاسم: ${b.name}`,
+    `📞 الهاتف: ${b.phone}`,
+    `🗓️ بداية الأسبوع: ${b.weekStart}`,
+    `📅 اليوم: ${day}`,
+    `🕒 الموعد: ${hh}:${mm}`,
+    `📚 عدد الحصص: ${b.sessionsCount}`,
+    `💵 المبلغ: ${b.priceEgp} ج.م`,
+    `💳 طريقة الدفع: ${
+      b.paymentMethod === "instapay" ? "InstaPay" : "Vodafone Cash"
+    }`,
+    `🔖 رقم العملية: ${b.paymentReference ?? "-"}`,
+    "✅ تم تأكيد استلام المبلغ.",
+  ];
+  const text = encodeURIComponent(lines.join("\n"));
+  return `https://wa.me/${WHATSAPP_PHONE}?text=${text}`;
 }
 
 router.get("/availability", (req, res, next) => {
@@ -83,20 +154,67 @@ router.get("/bookings", (_req, res, next) => {
         asc(bookingsTable.dayOfWeek),
         asc(bookingsTable.startMinutes),
       );
-    const data = ListBookingsResponse.parse(
-      rows.map((r) => ({
-        id: r.id,
-        carId: r.carId,
-        name: r.name,
-        phone: r.phone,
-        weekStart: r.weekStart,
-        dayOfWeek: r.dayOfWeek,
-        startMinutes: r.startMinutes,
-        notes: r.notes,
-        createdAt: r.createdAt.toISOString(),
-      })),
-    );
+    const data = ListBookingsResponse.parse(rows.map(serializeBooking));
     res.json(data);
+  })().catch(next);
+});
+
+router.get("/bookings/stats", (_req, res, next) => {
+  (async () => {
+    const todayWeekStart = toDateString(startOfWeekSaturday(new Date()));
+
+    const [{ total }] = await db
+      .select({ total: sql<number>`count(*)::int` })
+      .from(bookingsTable);
+
+    const [{ thisWeek }] = await db
+      .select({ thisWeek: sql<number>`count(*)::int` })
+      .from(bookingsTable)
+      .where(eq(bookingsTable.weekStart, todayWeekStart));
+
+    const popularRows = await db
+      .select({
+        dayOfWeek: bookingsTable.dayOfWeek,
+        cnt: sql<number>`count(*)::int`,
+      })
+      .from(bookingsTable)
+      .groupBy(bookingsTable.dayOfWeek)
+      .orderBy(sql`count(*) desc`)
+      .limit(1);
+
+    const data = GetBookingStatsResponse.parse({
+      totalBookings: total ?? 0,
+      thisWeekBookings: thisWeek ?? 0,
+      nextAvailableSlot: null,
+      popularDay: popularRows[0]?.dayOfWeek ?? null,
+    });
+    res.json(data);
+  })().catch(next);
+});
+
+router.get("/bookings/:id", (req, res, next) => {
+  (async () => {
+    const id = Number(req.params.id);
+    if (!Number.isFinite(id) || id <= 0) {
+      res.status(400).json({
+        error: "INVALID_ID",
+        message: "Booking id must be a positive integer.",
+      });
+      return;
+    }
+    const [row] = await db
+      .select()
+      .from(bookingsTable)
+      .where(eq(bookingsTable.id, id))
+      .limit(1);
+    if (!row) {
+      res.status(404).json({
+        error: "NOT_FOUND",
+        message: "الحجز غير موجود.",
+      });
+      return;
+    }
+    res.json(serializeBooking(row));
   })().catch(next);
 });
 
@@ -176,20 +294,13 @@ router.post("/bookings", (req, res, next) => {
           dayOfWeek: body.dayOfWeek,
           startMinutes: body.startMinutes,
           notes: body.notes ?? null,
+          priceEgp: PRICE_EGP,
+          sessionsCount: SESSIONS_COUNT,
+          paymentStatus: "pending",
         })
         .returning();
 
-      res.status(201).json({
-        id: created.id,
-        carId: created.carId,
-        name: created.name,
-        phone: created.phone,
-        weekStart: created.weekStart,
-        dayOfWeek: created.dayOfWeek,
-        startMinutes: created.startMinutes,
-        notes: created.notes,
-        createdAt: created.createdAt.toISOString(),
-      });
+      res.status(201).json(serializeBooking(created));
     } catch (err: unknown) {
       const code = (err as { code?: string }).code;
       if (code === "23505") {
@@ -204,36 +315,51 @@ router.post("/bookings", (req, res, next) => {
   })().catch(next);
 });
 
-router.get("/bookings/stats", (_req, res, next) => {
+router.post("/bookings/:id/payment", (req, res, next) => {
   (async () => {
-    const todayWeekStart = toDateString(startOfWeekSaturday(new Date()));
-
-    const [{ total }] = await db
-      .select({ total: sql<number>`count(*)::int` })
-      .from(bookingsTable);
-
-    const [{ thisWeek }] = await db
-      .select({ thisWeek: sql<number>`count(*)::int` })
+    const id = Number(req.params.id);
+    if (!Number.isFinite(id) || id <= 0) {
+      res.status(400).json({
+        error: "INVALID_ID",
+        message: "Booking id must be a positive integer.",
+      });
+      return;
+    }
+    const parsed = submitPaymentBody.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({
+        error: "INVALID_BODY",
+        message: parsed.error.message,
+      });
+      return;
+    }
+    const [existing] = await db
+      .select()
       .from(bookingsTable)
-      .where(eq(bookingsTable.weekStart, todayWeekStart));
-
-    const popularRows = await db
-      .select({
-        dayOfWeek: bookingsTable.dayOfWeek,
-        cnt: sql<number>`count(*)::int`,
-      })
-      .from(bookingsTable)
-      .groupBy(bookingsTable.dayOfWeek)
-      .orderBy(sql`count(*) desc`)
+      .where(eq(bookingsTable.id, id))
       .limit(1);
-
-    const data = GetBookingStatsResponse.parse({
-      totalBookings: total ?? 0,
-      thisWeekBookings: thisWeek ?? 0,
-      nextAvailableSlot: null,
-      popularDay: popularRows[0]?.dayOfWeek ?? null,
-    });
-    res.json(data);
+    if (!existing) {
+      res.status(404).json({
+        error: "NOT_FOUND",
+        message: "الحجز غير موجود.",
+      });
+      return;
+    }
+    if (existing.paymentStatus === "paid") {
+      // Already paid — return as-is.
+      res.json(serializeBooking(existing));
+      return;
+    }
+    const [updated] = await db
+      .update(bookingsTable)
+      .set({
+        paymentMethod: parsed.data.method,
+        paymentReference: parsed.data.reference,
+        paymentStatus: "submitted",
+      })
+      .where(eq(bookingsTable.id, id))
+      .returning();
+    res.json(serializeBooking(updated));
   })().catch(next);
 });
 

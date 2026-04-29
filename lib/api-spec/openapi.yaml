@@ -16,6 +16,10 @@ tags:
     description: Weekly availability schedule
   - name: cars
     description: Cars used for training
+  - name: pricing
+    description: Course pricing
+  - name: admin
+    description: Trainer dashboard endpoints (require X-Admin-Token)
 paths:
   /healthz:
     get:
@@ -30,6 +34,20 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /pricing:
+    get:
+      operationId: getPricing
+      tags: [pricing]
+      summary: Get the course pricing
+      description: Returns the course price and session count
+      responses:
+        "200":
+          description: Pricing info
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Pricing"
 
   /schedule:
     get:
@@ -133,6 +151,196 @@ paths:
               schema:
                 $ref: "#/components/schemas/BookingStats"
 
+  /bookings/{id}:
+    get:
+      operationId: getBooking
+      tags: [bookings]
+      summary: Get a booking by id
+      description: Used by the confirmation page to poll payment status
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: The booking
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Booking"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /bookings/{id}/payment:
+    post:
+      operationId: submitBookingPayment
+      tags: [bookings]
+      summary: Submit payment proof for a booking
+      description: Customer submits the payment method and transaction reference. Booking moves to "submitted" until the trainer confirms it.
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SubmitPaymentRequest"
+      responses:
+        "200":
+          description: Payment submitted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Booking"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /admin/login:
+    post:
+      operationId: adminLogin
+      tags: [admin]
+      summary: Verify the trainer admin token
+      description: Returns ok if the supplied token matches the configured ADMIN_TOKEN.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminLoginRequest"
+      responses:
+        "200":
+          description: Token accepted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminLoginResult"
+        "401":
+          description: Token rejected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /admin/bookings:
+    get:
+      operationId: adminListBookings
+      tags: [admin]
+      summary: List all bookings for the trainer dashboard
+      parameters:
+        - in: header
+          name: X-Admin-Token
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Bookings list with admin fields
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Booking"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /admin/bookings/{id}/confirm:
+    post:
+      operationId: adminConfirmBooking
+      tags: [admin]
+      summary: Trainer confirms payment was received
+      description: Marks the booking as paid and returns the wa.me URL the dashboard should open to notify the trainer.
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+        - in: header
+          name: X-Admin-Token
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Booking confirmed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminConfirmResult"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /admin/bookings/{id}/reject:
+    post:
+      operationId: adminRejectBooking
+      tags: [admin]
+      summary: Trainer rejects an unverified payment
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+        - in: header
+          name: X-Admin-Token
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Booking reset to awaiting payment
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Booking"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   /cars:
     get:
       operationId: listCars
@@ -158,6 +366,31 @@ components:
           type: string
       required:
         - status
+
+    Pricing:
+      type: object
+      properties:
+        priceEgp:
+          type: integer
+          description: Price for the full course in Egyptian Pounds
+        sessionsCount:
+          type: integer
+          description: Number of sessions included in the course
+        currency:
+          type: string
+          description: ISO 4217 currency code
+        vodafoneCashNumber:
+          type: string
+          description: Vodafone Cash wallet number to send the payment to
+        instapayHandle:
+          type: string
+          description: InstaPay handle to send the payment to
+      required:
+        - priceEgp
+        - sessionsCount
+        - currency
+        - vodafoneCashNumber
+        - instapayHandle
 
     Schedule:
       type: object
@@ -214,6 +447,18 @@ components:
         - weekStart
         - bookedSlots
 
+    PaymentStatus:
+      type: string
+      enum: [pending, submitted, paid]
+      description: |
+        pending = booking created, no payment info yet
+        submitted = customer entered payment reference, awaiting trainer review
+        paid = trainer confirmed money received
+
+    PaymentMethod:
+      type: string
+      enum: [vodafone_cash, instapay]
+
     Booking:
       type: object
       properties:
@@ -239,6 +484,22 @@ components:
         notes:
           type: string
           nullable: true
+        priceEgp:
+          type: integer
+        sessionsCount:
+          type: integer
+        paymentStatus:
+          $ref: "#/components/schemas/PaymentStatus"
+        paymentMethod:
+          $ref: "#/components/schemas/PaymentMethod"
+          nullable: true
+        paymentReference:
+          type: string
+          nullable: true
+        paidAt:
+          type: string
+          format: date-time
+          nullable: true
         createdAt:
           type: string
           format: date-time
@@ -250,6 +511,9 @@ components:
         - weekStart
         - dayOfWeek
         - startMinutes
+        - priceEgp
+        - sessionsCount
+        - paymentStatus
         - createdAt
 
     CreateBookingRequest:
@@ -286,6 +550,49 @@ components:
         - weekStart
         - dayOfWeek
         - startMinutes
+
+    SubmitPaymentRequest:
+      type: object
+      properties:
+        method:
+          $ref: "#/components/schemas/PaymentMethod"
+        reference:
+          type: string
+          minLength: 4
+          maxLength: 80
+          description: Vodafone Cash / InstaPay transaction reference number from the SMS confirmation
+      required:
+        - method
+        - reference
+
+    AdminLoginRequest:
+      type: object
+      properties:
+        token:
+          type: string
+          minLength: 1
+      required:
+        - token
+
+    AdminLoginResult:
+      type: object
+      properties:
+        ok:
+          type: boolean
+      required:
+        - ok
+
+    AdminConfirmResult:
+      type: object
+      properties:
+        booking:
+          $ref: "#/components/schemas/Booking"
+        whatsappUrl:
+          type: string
+          description: wa.me URL the dashboard should open to notify the trainer
+      required:
+        - booking
+        - whatsappUrl
 
     BookingStats:
       type: object

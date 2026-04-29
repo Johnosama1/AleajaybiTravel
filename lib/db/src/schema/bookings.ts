@@ -20,6 +20,14 @@ export const bookingsTable = pgTable(
     // Minutes from midnight (e.g. 540 = 09:00, 615 = 10:15)
     startMinutes: integer("start_minutes").notNull(),
     notes: text("notes"),
+    priceEgp: integer("price_egp").notNull().default(10),
+    sessionsCount: integer("sessions_count").notNull().default(4),
+    // pending | submitted | paid
+    paymentStatus: text("payment_status").notNull().default("pending"),
+    // vodafone_cash | instapay
+    paymentMethod: text("payment_method"),
+    paymentReference: text("payment_reference"),
+    paidAt: timestamp("paid_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),

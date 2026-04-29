@@ -3,12 +3,16 @@ import healthRouter from "./health";
 import scheduleRouter from "./schedule";
 import bookingsRouter from "./bookings";
 import carsRouter from "./cars";
+import pricingRouter from "./pricing";
+import adminRouter from "./admin";
 
 const router: IRouter = Router();
 
 router.use(healthRouter);
+router.use(pricingRouter);
 router.use(scheduleRouter);
 router.use(bookingsRouter);
 router.use(carsRouter);
+router.use(adminRouter);
 
 export default router;

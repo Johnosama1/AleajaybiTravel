@@ -17,6 +17,9 @@ import type {
 } from "@tanstack/react-query";
 
 import type {
+  AdminConfirmResult,
+  AdminLoginRequest,
+  AdminLoginResult,
   Availability,
   Booking,
   BookingStats,
@@ -25,7 +28,9 @@ import type {
   ErrorResponse,
   GetAvailabilityParams,
   HealthStatus,
+  Pricing,
   Schedule,
+  SubmitPaymentRequest,
 } from "./api.schemas";
 
 import { customFetch } from "../custom-fetch";
@@ -105,6 +110,80 @@ export function useHealthCheck<
   request?: SecondParameter<typeof customFetch>;
 }): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
   const queryOptions = getHealthCheckQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * Returns the course price and session count
+ * @summary Get the course pricing
+ */
+export const getGetPricingUrl = () => {
+  return `/api/pricing`;
+};
+
+export const getPricing = async (options?: RequestInit): Promise<Pricing> => {
+  return customFetch<Pricing>(getGetPricingUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetPricingQueryKey = () => {
+  return [`/api/pricing`] as const;
+};
+
+export const getGetPricingQueryOptions = <
+  TData = Awaited<ReturnType<typeof getPricing>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getPricing>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetPricingQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getPricing>>> = ({
+    signal,
+  }) => getPricing({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getPricing>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetPricingQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getPricing>>
+>;
+export type GetPricingQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get the course pricing
+ */
+
+export function useGetPricing<
+  TData = Awaited<ReturnType<typeof getPricing>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getPricing>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetPricingQueryOptions(options);
 
   const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
     queryKey: QueryKey;
@@ -520,6 +599,513 @@ export function useGetBookingStats<
 
   return { ...query, queryKey: queryOptions.queryKey };
 }
+
+/**
+ * Used by the confirmation page to poll payment status
+ * @summary Get a booking by id
+ */
+export const getGetBookingUrl = (id: number) => {
+  return `/api/bookings/${id}`;
+};
+
+export const getBooking = async (
+  id: number,
+  options?: RequestInit,
+): Promise<Booking> => {
+  return customFetch<Booking>(getGetBookingUrl(id), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetBookingQueryKey = (id: number) => {
+  return [`/api/bookings/${id}`] as const;
+};
+
+export const getGetBookingQueryOptions = <
+  TData = Awaited<ReturnType<typeof getBooking>>,
+  TError = ErrorType<ErrorResponse>,
+>(
+  id: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getBooking>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetBookingQueryKey(id);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getBooking>>> = ({
+    signal,
+  }) => getBooking(id, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!id,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getBooking>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetBookingQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getBooking>>
+>;
+export type GetBookingQueryError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Get a booking by id
+ */
+
+export function useGetBooking<
+  TData = Awaited<ReturnType<typeof getBooking>>,
+  TError = ErrorType<ErrorResponse>,
+>(
+  id: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getBooking>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetBookingQueryOptions(id, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * Customer submits the payment method and transaction reference. Booking moves to "submitted" until the trainer confirms it.
+ * @summary Submit payment proof for a booking
+ */
+export const getSubmitBookingPaymentUrl = (id: number) => {
+  return `/api/bookings/${id}/payment`;
+};
+
+export const submitBookingPayment = async (
+  id: number,
+  submitPaymentRequest: SubmitPaymentRequest,
+  options?: RequestInit,
+): Promise<Booking> => {
+  return customFetch<Booking>(getSubmitBookingPaymentUrl(id), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(submitPaymentRequest),
+  });
+};
+
+export const getSubmitBookingPaymentMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof submitBookingPayment>>,
+    TError,
+    { id: number; data: BodyType<SubmitPaymentRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof submitBookingPayment>>,
+  TError,
+  { id: number; data: BodyType<SubmitPaymentRequest> },
+  TContext
+> => {
+  const mutationKey = ["submitBookingPayment"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof submitBookingPayment>>,
+    { id: number; data: BodyType<SubmitPaymentRequest> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return submitBookingPayment(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type SubmitBookingPaymentMutationResult = NonNullable<
+  Awaited<ReturnType<typeof submitBookingPayment>>
+>;
+export type SubmitBookingPaymentMutationBody = BodyType<SubmitPaymentRequest>;
+export type SubmitBookingPaymentMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Submit payment proof for a booking
+ */
+export const useSubmitBookingPayment = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof submitBookingPayment>>,
+    TError,
+    { id: number; data: BodyType<SubmitPaymentRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof submitBookingPayment>>,
+  TError,
+  { id: number; data: BodyType<SubmitPaymentRequest> },
+  TContext
+> => {
+  return useMutation(getSubmitBookingPaymentMutationOptions(options));
+};
+
+/**
+ * Returns ok if the supplied token matches the configured ADMIN_TOKEN.
+ * @summary Verify the trainer admin token
+ */
+export const getAdminLoginUrl = () => {
+  return `/api/admin/login`;
+};
+
+export const adminLogin = async (
+  adminLoginRequest: AdminLoginRequest,
+  options?: RequestInit,
+): Promise<AdminLoginResult> => {
+  return customFetch<AdminLoginResult>(getAdminLoginUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(adminLoginRequest),
+  });
+};
+
+export const getAdminLoginMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof adminLogin>>,
+    TError,
+    { data: BodyType<AdminLoginRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof adminLogin>>,
+  TError,
+  { data: BodyType<AdminLoginRequest> },
+  TContext
+> => {
+  const mutationKey = ["adminLogin"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof adminLogin>>,
+    { data: BodyType<AdminLoginRequest> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return adminLogin(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type AdminLoginMutationResult = NonNullable<
+  Awaited<ReturnType<typeof adminLogin>>
+>;
+export type AdminLoginMutationBody = BodyType<AdminLoginRequest>;
+export type AdminLoginMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Verify the trainer admin token
+ */
+export const useAdminLogin = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof adminLogin>>,
+    TError,
+    { data: BodyType<AdminLoginRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof adminLogin>>,
+  TError,
+  { data: BodyType<AdminLoginRequest> },
+  TContext
+> => {
+  return useMutation(getAdminLoginMutationOptions(options));
+};
+
+/**
+ * @summary List all bookings for the trainer dashboard
+ */
+export const getAdminListBookingsUrl = () => {
+  return `/api/admin/bookings`;
+};
+
+export const adminListBookings = async (
+  options?: RequestInit,
+): Promise<Booking[]> => {
+  return customFetch<Booking[]>(getAdminListBookingsUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getAdminListBookingsQueryKey = () => {
+  return [`/api/admin/bookings`] as const;
+};
+
+export const getAdminListBookingsQueryOptions = <
+  TData = Awaited<ReturnType<typeof adminListBookings>>,
+  TError = ErrorType<ErrorResponse>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof adminListBookings>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getAdminListBookingsQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof adminListBookings>>
+  > = ({ signal }) => adminListBookings({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof adminListBookings>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type AdminListBookingsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof adminListBookings>>
+>;
+export type AdminListBookingsQueryError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary List all bookings for the trainer dashboard
+ */
+
+export function useAdminListBookings<
+  TData = Awaited<ReturnType<typeof adminListBookings>>,
+  TError = ErrorType<ErrorResponse>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof adminListBookings>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getAdminListBookingsQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * Marks the booking as paid and returns the wa.me URL the dashboard should open to notify the trainer.
+ * @summary Trainer confirms payment was received
+ */
+export const getAdminConfirmBookingUrl = (id: number) => {
+  return `/api/admin/bookings/${id}/confirm`;
+};
+
+export const adminConfirmBooking = async (
+  id: number,
+  options?: RequestInit,
+): Promise<AdminConfirmResult> => {
+  return customFetch<AdminConfirmResult>(getAdminConfirmBookingUrl(id), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getAdminConfirmBookingMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof adminConfirmBooking>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof adminConfirmBooking>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  const mutationKey = ["adminConfirmBooking"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof adminConfirmBooking>>,
+    { id: number }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return adminConfirmBooking(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type AdminConfirmBookingMutationResult = NonNullable<
+  Awaited<ReturnType<typeof adminConfirmBooking>>
+>;
+
+export type AdminConfirmBookingMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Trainer confirms payment was received
+ */
+export const useAdminConfirmBooking = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof adminConfirmBooking>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof adminConfirmBooking>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  return useMutation(getAdminConfirmBookingMutationOptions(options));
+};
+
+/**
+ * @summary Trainer rejects an unverified payment
+ */
+export const getAdminRejectBookingUrl = (id: number) => {
+  return `/api/admin/bookings/${id}/reject`;
+};
+
+export const adminRejectBooking = async (
+  id: number,
+  options?: RequestInit,
+): Promise<Booking> => {
+  return customFetch<Booking>(getAdminRejectBookingUrl(id), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getAdminRejectBookingMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof adminRejectBooking>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof adminRejectBooking>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  const mutationKey = ["adminRejectBooking"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof adminRejectBooking>>,
+    { id: number }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return adminRejectBooking(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type AdminRejectBookingMutationResult = NonNullable<
+  Awaited<ReturnType<typeof adminRejectBooking>>
+>;
+
+export type AdminRejectBookingMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Trainer rejects an unverified payment
+ */
+export const useAdminRejectBooking = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof adminRejectBooking>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof adminRejectBooking>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  return useMutation(getAdminRejectBookingMutationOptions(options));
+};
 
 /**
  * Returns the cars the school uses for training

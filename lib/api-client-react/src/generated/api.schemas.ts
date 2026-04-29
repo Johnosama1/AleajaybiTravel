@@ -9,6 +9,19 @@ export interface HealthStatus {
   status: string;
 }
 
+export interface Pricing {
+  /** Price for the full course in Egyptian Pounds */
+  priceEgp: number;
+  /** Number of sessions included in the course */
+  sessionsCount: number;
+  /** ISO 4217 currency code */
+  currency: string;
+  /** Vodafone Cash wallet number to send the payment to */
+  vodafoneCashNumber: string;
+  /** InstaPay handle to send the payment to */
+  instapayHandle: string;
+}
+
 export interface Schedule {
   /** Day-of-week numbers available for manual cars (0=Saturday ... 6=Friday) */
   daysManual: number[];
@@ -29,6 +42,27 @@ export interface Availability {
   bookedSlots: string[];
 }
 
+/**
+ * pending = booking created, no payment info yet
+submitted = customer entered payment reference, awaiting trainer review
+paid = trainer confirmed money received
+
+ */
+export type PaymentStatus = (typeof PaymentStatus)[keyof typeof PaymentStatus];
+
+export const PaymentStatus = {
+  pending: "pending",
+  submitted: "submitted",
+  paid: "paid",
+} as const;
+
+export type PaymentMethod = (typeof PaymentMethod)[keyof typeof PaymentMethod];
+
+export const PaymentMethod = {
+  vodafone_cash: "vodafone_cash",
+  instapay: "instapay",
+} as const;
+
 export interface Booking {
   id: number;
   carId: number;
@@ -46,6 +80,12 @@ export interface Booking {
    */
   startMinutes: number;
   notes?: string | null;
+  priceEgp: number;
+  sessionsCount: number;
+  paymentStatus: PaymentStatus;
+  paymentMethod?: PaymentMethod | null;
+  paymentReference?: string | null;
+  paidAt?: string | null;
   createdAt: string;
 }
 
@@ -74,6 +114,31 @@ export interface CreateBookingRequest {
   startMinutes: number;
   /** @maxLength 500 */
   notes?: string;
+}
+
+export interface SubmitPaymentRequest {
+  method: PaymentMethod;
+  /**
+   * Vodafone Cash / InstaPay transaction reference number from the SMS confirmation
+   * @minLength 4
+   * @maxLength 80
+   */
+  reference: string;
+}
+
+export interface AdminLoginRequest {
+  /** @minLength 1 */
+  token: string;
+}
+
+export interface AdminLoginResult {
+  ok: boolean;
+}
+
+export interface AdminConfirmResult {
+  booking: Booking;
+  /** wa.me URL the dashboard should open to notify the trainer */
+  whatsappUrl: string;
 }
 
 export interface BookingStats {
