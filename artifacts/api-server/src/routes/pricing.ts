@@ -5,7 +5,7 @@ export const PRICE_EGP = 10;
 export const SESSIONS_COUNT = 4;
 // Wallet number / handle the customer pays to. Override via env vars in production.
 export const VODAFONE_CASH_NUMBER =
-  process.env["VODAFONE_CASH_NUMBER"] ?? "01099399666";
+  process.env["VODAFONE_CASH_NUMBER"] ?? "01017979651";
 export const INSTAPAY_HANDLE =
   process.env["INSTAPAY_HANDLE"] ?? "aleajaybi@instapay";
 

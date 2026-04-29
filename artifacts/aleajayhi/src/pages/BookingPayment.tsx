@@ -31,11 +31,37 @@ import { useToast } from "@/hooks/use-toast";
 
 type Method = SubmitPaymentRequest["method"];
 
+const TRAINER_WHATSAPP = "201017979651";
+const SESSION_DURATION_HOURS = 1;
+
 function copyToClipboard(text: string) {
   if (navigator.clipboard) {
     return navigator.clipboard.writeText(text);
   }
   return Promise.resolve();
+}
+
+function buildTrainerWhatsappUrl(booking: Booking, method: string, reference: string): string {
+  const dayNamesAr = ["السبت","الأحد","الإثنين","الثلاثاء","الأربعاء","الخميس","الجمعة"];
+  const day = dayNamesAr[booking.dayOfWeek] ?? `يوم ${booking.dayOfWeek}`;
+  const hh = Math.floor(booking.startMinutes / 60).toString().padStart(2, "0");
+  const mm = (booking.startMinutes % 60).toString().padStart(2, "0");
+  const methodLabel = method === "instapay" ? "InstaPay" : "Vodafone Cash";
+  const lines = [
+    "🚗 *طلب حجز جديد — Aleajaybi Travel*",
+    "",
+    `👤 الاسم: ${booking.name}`,
+    `📞 الهاتف: ${booking.phone}`,
+    `📅 اليوم: ${day}`,
+    `🕒 الموعد: ${hh}:${mm}`,
+    `📚 عدد الحصص: ${booking.sessionsCount} حصص (${SESSION_DURATION_HOURS} ساعة/حصة)`,
+    `💵 المبلغ المدفوع: ${booking.priceEgp} ج.م`,
+    `💳 طريقة الدفع: ${methodLabel}`,
+    reference ? `🔖 رقم العملية: ${reference}` : `📸 تم إرفاق صورة الإيصال`,
+    "",
+    "⚠️ الرجاء تأكيد استلام المبلغ وتفعيل الحجز.",
+  ];
+  return `https://wa.me/${TRAINER_WHATSAPP}?text=${encodeURIComponent(lines.join("\n"))}`;
 }
 
 export default function BookingPayment() {
@@ -142,9 +168,11 @@ export default function BookingPayment() {
         },
       });
       toast({
-        title: "تم استلام بيانات الدفع",
-        description: "سيتم تأكيد الحجز فور مراجعة المبلغ.",
+        title: "✅ تم إرسال بيانات الدفع",
+        description: "جارٍ فتح واتساب لإرسال تفاصيل الحجز للمدرب...",
       });
+      const waUrl = buildTrainerWhatsappUrl(booking, method, trimmedRef);
+      window.open(waUrl, "_blank", "noopener");
     } catch (error: unknown) {
       const msg =
         (error as { message?: string })?.message ||
@@ -172,19 +200,30 @@ export default function BookingPayment() {
           className="rounded-3xl border border-border bg-card p-5 sm:p-7 space-y-5"
           data-testid="card-payment-instructions"
         >
-          <div className="flex items-center justify-between gap-3 flex-wrap">
-            <h2 className="text-xl sm:text-2xl font-extrabold">
-              ادفع{" "}
-              <span className="text-primary">
-                {booking.priceEgp} ج.م
-              </span>{" "}
-              لتأكيد الحجز
-            </h2>
-            <Badge className="bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30 font-bold gap-1">
+          {/* Course Specs */}
+          <div className="text-center py-2 space-y-1">
+            <Badge className="bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30 font-bold gap-1 mb-3">
               <Clock3 className="h-3.5 w-3.5" />
               في انتظار الدفع
             </Badge>
+            <div className="text-5xl sm:text-6xl font-black text-primary leading-none">
+              {booking.priceEgp}
+            </div>
+            <div className="text-xl font-extrabold text-foreground">ج.م</div>
+            <div className="flex items-center justify-center gap-4 pt-2 text-sm text-muted-foreground">
+              <span className="flex items-center gap-1">
+                <CheckCircle2 className="h-4 w-4 text-primary" />
+                <b className="text-foreground">{booking.sessionsCount}</b> حصص
+              </span>
+              <span className="w-px h-4 bg-border" />
+              <span className="flex items-center gap-1">
+                <CheckCircle2 className="h-4 w-4 text-primary" />
+                ساعة / الحصة
+              </span>
+            </div>
           </div>
+
+          <div className="border-t border-border/50" />
 
           <Tabs value={method} onValueChange={(v) => setMethod(v as Method)}>
             <TabsList className="grid grid-cols-2 w-full">
@@ -222,12 +261,9 @@ export default function BookingPayment() {
           </Tabs>
 
           <ol className="text-sm text-muted-foreground space-y-1.5 list-decimal pr-5">
-            <li>حوّل {booking.priceEgp} ج.م بالضبط إلى الرقم/العنوان أعلاه.</li>
-            <li>هتوصلك رسالة تأكيد فيها رقم العملية (Transaction ID).</li>
-            <li>
-              اكتب رقم العملية في الخانة بالأسفل واضغط <b>إرسال</b>.
-            </li>
-            <li>الموقع هيراجع التحويل ويأكدلك الحجز تلقائيًا.</li>
+            <li>حوّل <b className="text-foreground">{booking.priceEgp} ج.م</b> بالضبط إلى الرقم/العنوان أعلاه.</li>
+            <li>ارفع صورة الإيصال أو اكتب رقم العملية في الخانة بالأسفل.</li>
+            <li>اضغط <b className="text-foreground">إرسال</b> — هيفتح واتساب تلقائياً للمدرب لتأكيد الحجز.</li>
           </ol>
 
           <form onSubmit={handleSubmit} className="space-y-3 pt-1">
@@ -304,7 +340,7 @@ export default function BookingPayment() {
           <div className="flex items-start gap-2 text-xs text-muted-foreground border-t border-border/60 pt-4">
             <ShieldCheck className="h-4 w-4 text-primary shrink-0 mt-0.5" />
             <span>
-              بياناتك آمنة. لن يتم تأكيد الحجز إلا بعد التحقق من استلام المبلغ.
+              بعد الضغط على إرسال، هيفتح واتساب تلقائياً على رقم المدرب مع كل تفاصيل حجزك. الحجز يتأكد لما المدرب يتواصل معاك.
             </span>
           </div>
         </motion.div>

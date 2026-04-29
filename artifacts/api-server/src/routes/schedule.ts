@@ -3,7 +3,7 @@ import { GetScheduleResponse } from "@workspace/api-zod";
 
 const router: IRouter = Router();
 
-const WHATSAPP_PHONE = "201099399666";
+const WHATSAPP_PHONE = "201017979651";
 
 // Manual cars available: Saturday(0), Monday(2), Wednesday(4)
 const DAYS_MANUAL = [0, 2, 4];
