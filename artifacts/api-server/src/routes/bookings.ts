@@ -33,10 +33,15 @@ const createBookingBody = z.object({
   notes: z.string().max(500).optional(),
 });
 
-const submitPaymentBody = z.object({
-  method: z.enum(["vodafone_cash", "instapay"]),
-  reference: z.string().min(4).max(80),
-});
+const submitPaymentBody = z
+  .object({
+    method: z.enum(["vodafone_cash", "instapay"]),
+    reference: z.string().min(4).max(80).optional(),
+    proofImage: z.string().max(8_000_000).optional(),
+  })
+  .refine((d) => d.reference || d.proofImage, {
+    message: "يجب إدخال رقم العملية أو رفع صورة الإيصال",
+  });
 
 const router: IRouter = Router();
 
@@ -73,6 +78,7 @@ export function serializeBooking(b: BookingRow) {
       | "instapay"
       | null,
     paymentReference: b.paymentReference,
+    paymentProofUrl: b.paymentProofUrl ?? null,
     paidAt: b.paidAt ? b.paidAt.toISOString() : null,
     createdAt: b.createdAt.toISOString(),
   };
@@ -354,7 +360,8 @@ router.post("/bookings/:id/payment", (req, res, next) => {
       .update(bookingsTable)
       .set({
         paymentMethod: parsed.data.method,
-        paymentReference: parsed.data.reference,
+        paymentReference: parsed.data.reference ?? null,
+        paymentProofUrl: parsed.data.proofImage ?? null,
         paymentStatus: "submitted",
       })
       .where(eq(bookingsTable.id, id))

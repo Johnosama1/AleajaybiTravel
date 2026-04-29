@@ -6,8 +6,10 @@ import {
   CheckCircle2,
   Clock3,
   Copy,
+  ImagePlus,
   Loader2,
   ShieldCheck,
+  X,
 } from "lucide-react";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
@@ -58,6 +60,19 @@ export default function BookingPayment() {
 
   const [method, setMethod] = useState<Method>("vodafone_cash");
   const [reference, setReference] = useState("");
+  const [proofImage, setProofImage] = useState<string | null>(null);
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      toast({ title: "الصورة كبيرة جداً", description: "الحد الأقصى 5MB", variant: "destructive" });
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => setProofImage(reader.result as string);
+    reader.readAsDataURL(file);
+  };
 
   useEffect(() => {
     if (booking?.paymentMethod) {
@@ -100,10 +115,19 @@ export default function BookingPayment() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!reference || reference.trim().length < 4) {
+    const trimmedRef = reference.trim();
+    if (!trimmedRef && !proofImage) {
       toast({
         title: "بيانات ناقصة",
-        description: "أدخل رقم العملية كما يظهر في رسالة التحويل.",
+        description: "أدخل رقم العملية أو ارفع صورة الإيصال.",
+        variant: "destructive",
+      });
+      return;
+    }
+    if (trimmedRef && trimmedRef.length < 4) {
+      toast({
+        title: "رقم العملية قصير",
+        description: "يجب أن يكون رقم العملية 4 أحرف على الأقل.",
         variant: "destructive",
       });
       return;
@@ -111,7 +135,11 @@ export default function BookingPayment() {
     try {
       await submitPaymentMutation.mutateAsync({
         id,
-        data: { method, reference: reference.trim() },
+        data: {
+          method,
+          reference: trimmedRef || undefined,
+          proofImage: proofImage ?? undefined,
+        },
       });
       toast({
         title: "تم استلام بيانات الدفع",
@@ -204,16 +232,55 @@ export default function BookingPayment() {
 
           <form onSubmit={handleSubmit} className="space-y-3 pt-1">
             <div className="space-y-1.5">
-              <Label htmlFor="reference">رقم العملية / المرجع</Label>
+              <Label htmlFor="reference">رقم العملية / المرجع <span className="text-muted-foreground font-normal">(اختياري)</span></Label>
               <Input
                 id="reference"
                 value={reference}
                 onChange={(e) => setReference(e.target.value)}
                 placeholder="مثال: 123456789"
                 dir="ltr"
-                required
                 data-testid="input-payment-reference"
               />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label>صورة الإيصال <span className="text-muted-foreground font-normal">(اختياري)</span></Label>
+              {proofImage ? (
+                <div className="relative rounded-2xl overflow-hidden border-2 border-primary/40">
+                  <img
+                    src={proofImage}
+                    alt="إيصال الدفع"
+                    className="w-full max-h-48 object-contain bg-black/5"
+                  />
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="destructive"
+                    className="absolute top-2 left-2 h-7 w-7 p-0"
+                    onClick={() => setProofImage(null)}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              ) : (
+                <label
+                  htmlFor="proof-image"
+                  className="flex flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-border bg-card/50 p-5 cursor-pointer hover:border-primary/50 hover:bg-primary/5 transition-colors"
+                  data-testid="label-proof-upload"
+                >
+                  <ImagePlus className="h-7 w-7 text-muted-foreground" />
+                  <span className="text-sm text-muted-foreground">اضغط لرفع صورة التحويل</span>
+                  <span className="text-xs text-muted-foreground/60">JPG, PNG — بحد أقصى 5MB</span>
+                  <input
+                    id="proof-image"
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handleImageChange}
+                    data-testid="input-proof-image"
+                  />
+                </label>
+              )}
             </div>
 
             <Button

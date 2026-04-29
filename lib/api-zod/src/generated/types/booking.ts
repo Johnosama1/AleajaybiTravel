@@ -30,6 +30,7 @@ export interface Booking {
   paymentStatus: PaymentStatus;
   paymentMethod?: PaymentMethod | null;
   paymentReference?: string | null;
+  paymentProofUrl?: string | null;
   paidAt?: Date | null;
   createdAt: Date;
 }

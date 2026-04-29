@@ -27,6 +27,7 @@ export const bookingsTable = pgTable(
     // vodafone_cash | instapay
     paymentMethod: text("payment_method"),
     paymentReference: text("payment_reference"),
+    paymentProofUrl: text("payment_proof_url"),
     paidAt: timestamp("paid_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()

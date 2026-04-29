@@ -14,5 +14,7 @@ export interface SubmitPaymentRequest {
    * @minLength 4
    * @maxLength 80
    */
-  reference: string;
+  reference?: string;
+  /** Base64 encoded proof image (data URL) */
+  proofImage?: string;
 }

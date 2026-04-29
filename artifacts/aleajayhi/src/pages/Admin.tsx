@@ -414,6 +414,20 @@ function BookingRow({
               </code>
             </div>
           )}
+          {booking.paymentProofUrl && (
+            <a
+              href={booking.paymentProofUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              data-testid={`link-proof-${booking.id}`}
+            >
+              <img
+                src={booking.paymentProofUrl}
+                alt="إيصال الدفع"
+                className="mt-2 max-h-32 rounded-xl border border-border object-contain bg-black/5 cursor-pointer hover:opacity-80 transition-opacity"
+              />
+            </a>
+          )}
         </div>
         {actions && (
           <div
