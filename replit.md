@@ -98,6 +98,14 @@ Without these secrets, the system logs a warning and skips sending — everythin
 
 The WhatsApp message sent includes: name, phone, day, time, sessions, amount, payment method, transaction ID, and car type.
 
+## Important Notes
+
+### API Caching Fix
+All API routes (`/api/*`) return `Cache-Control: no-store, no-cache, must-revalidate, proxy-revalidate` headers. This is critical because Replit's proxy infrastructure was caching API responses and returning `304 Not Modified` to the browser — causing React Query to receive empty data and leaving the UI stuck in skeleton loading state forever.
+
+### Vite Dev Server (canvas artifact)
+The `artifacts/aleajayhi: web` workflow runs Vite on port 21621 (external port 3000). The `package.json` dev script does NOT include `--host 0.0.0.0` so that `vite.config.ts`'s `host: "::"` (IPv6) takes effect. This is required for Replit's proxy to reach the dev server.
+
 ## Deployment
 
 Configured as `autoscale` deployment. Build step compiles both frontend and backend; run command starts the API server in production mode.

@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -168,6 +169,9 @@ export function CarBookingDialog({
           <DialogTitle className="text-right text-xl sm:text-2xl text-primary">
             {car.name}
           </DialogTitle>
+          <DialogDescription className="text-right text-sm text-muted-foreground">
+            اختر الموعد المناسب ثم أدخل بياناتك لإتمام الحجز.
+          </DialogDescription>
         </DialogHeader>
 
         <AnimatePresence mode="wait">
