@@ -13,6 +13,11 @@ import {
   WHATSAPP_PHONE,
 } from "./schedule.js";
 import { PRICE_EGP, SESSIONS_COUNT } from "./pricing.js";
+import {
+  sendWhatsAppToInstructor,
+  buildBookingCreatedMessage,
+  buildPaymentSubmittedMessage,
+} from "../lib/whatsapp.js";
 
 const dateString = z
   .string()
@@ -307,6 +312,26 @@ router.post("/bookings", (req, res, next) => {
         .returning();
 
       res.status(201).json(serializeBooking(created));
+
+      const [carRow] = await db
+        .select({ name: carsTable.name, transmission: carsTable.transmission })
+        .from(carsTable)
+        .where(eq(carsTable.id, body.carId))
+        .limit(1);
+
+      sendWhatsAppToInstructor(
+        buildBookingCreatedMessage({
+          name: body.name,
+          phone: body.phone,
+          dayOfWeek: body.dayOfWeek,
+          startMinutes: body.startMinutes,
+          weekStart: body.weekStart,
+          sessions: SESSIONS_COUNT,
+          amount: PRICE_EGP,
+          carName: carRow?.name ?? "سيارة",
+          carType: carRow?.transmission ?? "manual",
+        }),
+      ).catch(() => {});
     } catch (err: unknown) {
       const code = (err as { code?: string }).code;
       if (code === "23505") {
@@ -366,7 +391,29 @@ router.post("/bookings/:id/payment", (req, res, next) => {
       })
       .where(eq(bookingsTable.id, id))
       .returning();
+
     res.json(serializeBooking(updated));
+
+    const [carRow] = await db
+      .select({ name: carsTable.name, transmission: carsTable.transmission })
+      .from(carsTable)
+      .where(eq(carsTable.id, updated.carId))
+      .limit(1);
+
+    sendWhatsAppToInstructor(
+      buildPaymentSubmittedMessage({
+        name: updated.name,
+        phone: updated.phone,
+        dayOfWeek: updated.dayOfWeek,
+        startMinutes: updated.startMinutes,
+        sessions: updated.sessionsCount,
+        amount: updated.priceEgp,
+        method: updated.paymentMethod ?? "vodafone_cash",
+        reference: updated.paymentReference ?? "-",
+        carName: carRow?.name ?? "سيارة",
+        carType: carRow?.transmission ?? "manual",
+      }),
+    ).catch(() => {});
   })().catch(next);
 });
 
