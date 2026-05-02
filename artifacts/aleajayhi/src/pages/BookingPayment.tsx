@@ -32,37 +32,11 @@ import { useToast } from "@/hooks/use-toast";
 
 type Method = SubmitPaymentRequest["method"];
 
-const TRAINER_WHATSAPP = "201017979651";
-const SESSION_DURATION_HOURS = 1;
-
 function copyToClipboard(text: string) {
   if (navigator.clipboard) {
     return navigator.clipboard.writeText(text);
   }
   return Promise.resolve();
-}
-
-function buildTrainerWhatsappUrl(booking: Booking, method: string, reference: string): string {
-  const dayNamesAr = ["السبت","الأحد","الإثنين","الثلاثاء","الأربعاء","الخميس","الجمعة"];
-  const day = dayNamesAr[booking.dayOfWeek] ?? `يوم ${booking.dayOfWeek}`;
-  const hh = Math.floor(booking.startMinutes / 60).toString().padStart(2, "0");
-  const mm = (booking.startMinutes % 60).toString().padStart(2, "0");
-  const methodLabel = method === "instapay" ? "InstaPay" : "Vodafone Cash";
-  const lines = [
-    "🚗 *طلب حجز جديد — Aleajaybi Travel*",
-    "",
-    `👤 الاسم: ${booking.name}`,
-    `📞 الهاتف: ${booking.phone}`,
-    `📅 اليوم: ${day}`,
-    `🕒 الموعد: ${hh}:${mm}`,
-    `📚 عدد الحصص: ${booking.sessionsCount} حصص (${SESSION_DURATION_HOURS} ساعة/حصة)`,
-    `💵 المبلغ المدفوع: ${booking.priceEgp} ج.م`,
-    `💳 طريقة الدفع: ${methodLabel}`,
-    reference ? `🔖 رقم العملية: ${reference}` : `📸 تم إرفاق صورة الإيصال`,
-    "",
-    "⚠️ الرجاء تأكيد استلام المبلغ وتفعيل الحجز.",
-  ];
-  return `https://wa.me/${TRAINER_WHATSAPP}?text=${encodeURIComponent(lines.join("\n"))}`;
 }
 
 export default function BookingPayment() {
@@ -171,10 +145,8 @@ export default function BookingPayment() {
       });
       toast({
         title: "✅ تم إرسال بيانات الدفع",
-        description: "جارٍ فتح واتساب لإرسال تفاصيل الحجز للمدرب...",
+        description: "سيتم مراجعة الدفع والتواصل معك قريباً.",
       });
-      const waUrl = buildTrainerWhatsappUrl(booking, method, trimmedRef);
-      window.open(waUrl, "_blank", "noopener");
     } catch (error: unknown) {
       const msg =
         (error as { message?: string })?.message ||
@@ -267,7 +239,7 @@ export default function BookingPayment() {
           <ol className="text-sm text-muted-foreground space-y-1.5 list-decimal pr-5">
             <li>حوّل <b className="text-foreground">{booking.priceEgp} ج.م</b> بالضبط إلى الرقم/العنوان أعلاه.</li>
             <li>ارفع صورة الإيصال أو اكتب رقم العملية في الخانة بالأسفل.</li>
-            <li>اضغط <b className="text-foreground">إرسال</b> — هيفتح واتساب تلقائياً للمدرب لتأكيد الحجز.</li>
+            <li>اضغط <b className="text-foreground">إرسال</b> — سيتم مراجعة الدفع والتواصل معك قريباً.</li>
           </ol>
 
           <form onSubmit={handleSubmit} className="space-y-3 pt-1">
@@ -344,7 +316,7 @@ export default function BookingPayment() {
           <div className="flex items-start gap-2 text-xs text-muted-foreground border-t border-border/60 pt-4">
             <ShieldCheck className="h-4 w-4 text-primary shrink-0 mt-0.5" />
             <span>
-              بعد الضغط على إرسال، هيفتح واتساب تلقائياً على رقم المدرب مع كل تفاصيل حجزك. الحجز يتأكد لما المدرب يتواصل معاك.
+              بعد الضغط على إرسال، سيصل إشعار للمدرب بكل تفاصيل حجزك. الحجز يتأكد لما المدرب يتواصل معاك.
             </span>
           </div>
         </motion.div>
@@ -540,7 +512,7 @@ function PaidCard({
           </div>
         </div>
         <p className="text-sm text-muted-foreground">
-          المدرب اتبلّغ بالحجز على الواتساب — هيتواصل معاك قبل الموعد بفترة.
+          المدرب اتبلّغ بالحجز — هيتواصل معاك قبل الموعد بفترة.
         </p>
         <Button asChild size="lg" className="font-extrabold">
           <Link href="/" data-testid="link-paid-home">
