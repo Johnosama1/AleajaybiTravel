@@ -12,6 +12,8 @@ const __dirname = path.dirname(__filename);
 
 const app: Express = express();
 
+app.disable("etag");
+
 app.use(
   pinoHttp({
     logger,

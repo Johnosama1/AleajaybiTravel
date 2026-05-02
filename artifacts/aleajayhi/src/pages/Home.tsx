@@ -26,7 +26,7 @@ function getCarImage(car: Car): string {
 }
 
 export default function Home() {
-  const { data: cars, isLoading: carsLoading } = useListCars();
+  const { data: cars, isLoading: carsLoading, isError: carsError, refetch: refetchCars } = useListCars();
   const { data: stats } = useGetBookingStats();
   const [selectedCar, setSelectedCar] = useState<Car | null>(null);
 
@@ -139,7 +139,12 @@ export default function Home() {
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 sm:gap-7 max-w-4xl mx-auto">
-              {carsLoading || !cars
+              {carsError ? (
+                <div className="col-span-full flex flex-col items-center gap-4 py-10 text-center">
+                  <p className="text-muted-foreground text-sm">تعذّر تحميل السيارات. تحقق من اتصالك وحاول مجدداً.</p>
+                  <Button variant="outline" onClick={() => refetchCars()}>إعادة المحاولة</Button>
+                </div>
+              ) : carsLoading || !cars
                 ? Array.from({ length: 2 }).map((_, i) => (
                     <div
                       key={i}
@@ -165,6 +170,7 @@ export default function Home() {
                         viewport={{ once: true }}
                         transition={{ delay: i * 0.1 }}
                         whileHover={{ y: -4 }}
+                        whileTap={{ scale: 0.97 }}
                         onClick={() => setSelectedCar(car)}
                         data-testid={`button-car-${car.id}`}
                         className="group text-right bg-card border border-border rounded-2xl overflow-hidden shadow-sm hover:shadow-xl hover:border-primary/60 transition-all"
@@ -197,9 +203,14 @@ export default function Home() {
                           <p className="text-muted-foreground text-sm mt-2 leading-relaxed">
                             {car.description}
                           </p>
-                          <div className="mt-4 inline-flex items-center gap-2 text-primary font-bold text-sm">
-                            <CalendarDays className="h-4 w-4" />
-                            عرض المواعيد المتاحة
+                          <div className="mt-4 flex items-center justify-between gap-2">
+                            <div className="inline-flex items-center gap-2 text-primary font-bold text-sm">
+                              <CalendarDays className="h-4 w-4" />
+                              عرض المواعيد المتاحة
+                            </div>
+                            <span className="text-xs bg-primary text-primary-foreground font-bold px-3 py-1.5 rounded-full">
+                              احجز الآن
+                            </span>
                           </div>
                         </div>
                       </motion.button>

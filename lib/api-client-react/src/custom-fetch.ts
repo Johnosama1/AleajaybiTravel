@@ -337,6 +337,15 @@ export async function customFetch<T = unknown>(
 
   const headers = mergeHeaders(isRequest(input) ? input.headers : undefined, headersInit);
 
+  if (method === "GET" || method === "HEAD") {
+    if (!headers.has("cache-control")) {
+      headers.set("cache-control", "no-cache, no-store");
+    }
+    if (!headers.has("pragma")) {
+      headers.set("pragma", "no-cache");
+    }
+  }
+
   if (
     typeof init.body === "string" &&
     !headers.has("content-type") &&
@@ -360,7 +369,12 @@ export async function customFetch<T = unknown>(
 
   const requestInfo = { method, url: resolveUrl(input) };
 
-  const response = await fetch(input, { ...init, method, headers });
+  const fetchInit: RequestInit = { ...init, method, headers };
+  if (method === "GET" || method === "HEAD") {
+    fetchInit.cache = "no-store";
+  }
+
+  const response = await fetch(input, fetchInit);
 
   if (!response.ok) {
     const errorData = await parseErrorBody(response, method);
