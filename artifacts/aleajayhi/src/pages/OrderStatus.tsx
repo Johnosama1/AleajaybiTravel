@@ -106,7 +106,7 @@ export default function OrderStatus() {
   return (
     <div className="flex min-h-screen flex-col bg-background text-foreground">
       <Header />
-      <main className="flex-1 grid place-items-center py-10 px-4">
+      <main className="flex-1 flex items-center justify-center py-10 px-4">
         {error ? (
           <motion.div
             initial={{ opacity: 0, y: 12 }}

@@ -97,6 +97,11 @@ export function CarBookingDialog({
     [availability],
   );
 
+  const hasAnySlot = useMemo(() => {
+    if (!availability) return true;
+    return days.some((d) => slots.some((m) => !bookedSet.has(`${d}-${m}`)));
+  }, [days, slots, bookedSet, availability]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!car || selectedDay === null || selectedSlot === null) return;
@@ -191,10 +196,6 @@ export function CarBookingDialog({
                 <div className="space-y-5">
                   {days.map((dayIdx) => {
                     const date = addDays(weekSaturday, dayIdx);
-                    const availableSlots = slots.filter(
-                      (m) => !bookedSet.has(`${dayIdx}-${m}`),
-                    );
-                    if (availableSlots.length === 0) return null;
                     return (
                       <div
                         key={dayIdx}
@@ -210,12 +211,25 @@ export function CarBookingDialog({
                           </div>
                         </div>
                         <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
-                          {availableSlots.map((m) => {
+                          {slots.map((m) => {
+                            const key = `${dayIdx}-${m}`;
+                            const isBooked = bookedSet.has(key);
                             const isActive =
                               selectedDay === dayIdx && selectedSlot === m;
+                            if (isBooked) {
+                              return (
+                                <div
+                                  key={key}
+                                  title="محجوز"
+                                  className="rounded-lg py-2.5 text-sm font-extrabold border-2 border-red-500/40 bg-red-500/10 text-red-500/70 text-center cursor-not-allowed select-none line-through"
+                                >
+                                  <span dir="ltr">{formatMinutes(m)}</span>
+                                </div>
+                              );
+                            }
                             return (
                               <button
-                                key={`${dayIdx}-${m}`}
+                                key={key}
                                 type="button"
                                 onClick={() => {
                                   setSelectedDay(dayIdx);
@@ -236,6 +250,11 @@ export function CarBookingDialog({
                       </div>
                     );
                   })}
+                  {!hasAnySlot && (
+                    <p className="text-center text-sm text-muted-foreground py-2">
+                      كل المواعيد محجوزة هذا الأسبوع. جرب أسبوعاً آخر.
+                    </p>
+                  )}
                 </div>
               )}
 

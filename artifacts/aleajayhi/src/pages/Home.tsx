@@ -15,6 +15,8 @@ import { Badge } from "@/components/ui/badge";
 import logoImage from "@assets/photo_2026-04-28_17-50-50_1777391528214.jpg";
 import nissanImage from "@assets/photo_2026-04-28_17-51-01_1777391528213.jpg";
 import fiatImage from "@assets/photo_2026-04-28_17-50-56_1777391528214.jpg";
+import offerAutoImage from "@assets/photo_2026-05-03_03-17-47_1777771087443.jpg";
+import offerManualImage from "@assets/photo_2026-05-03_03-17-55_1777771121436.jpg";
 
 const CAR_IMAGES: Record<string, string> = {
   "/cars/nissan-sunny.jpg": nissanImage,
@@ -233,6 +235,47 @@ export default function Home() {
                       </motion.button>
                     );
                   })}
+            </div>
+          </div>
+        </section>
+
+        {/* OFFERS */}
+        <section className="py-12 sm:py-16">
+          <div className="container">
+            <div className="text-center max-w-2xl mx-auto mb-8 sm:mb-10">
+              <h2 className="text-2xl sm:text-3xl font-extrabold mb-3">
+                عروضنا <span className="text-primary">الخاصة</span>
+              </h2>
+              <p className="text-muted-foreground text-sm sm:text-base">
+                عروض حصرية لشهر مايو — لا تفوّتها!
+              </p>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 max-w-4xl mx-auto">
+              <motion.div
+                initial={{ opacity: 0, y: 16 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                className="rounded-2xl overflow-hidden border border-border shadow-sm hover:shadow-xl transition-shadow"
+              >
+                <img
+                  src={offerAutoImage}
+                  alt="عرض السيارة الأوتوماتيك"
+                  className="w-full h-auto object-cover"
+                />
+              </motion.div>
+              <motion.div
+                initial={{ opacity: 0, y: 16 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: 0.1 }}
+                className="rounded-2xl overflow-hidden border border-border shadow-sm hover:shadow-xl transition-shadow"
+              >
+                <img
+                  src={offerManualImage}
+                  alt="عرض السيارة المانيوال"
+                  className="w-full h-auto object-cover"
+                />
+              </motion.div>
             </div>
           </div>
         </section>

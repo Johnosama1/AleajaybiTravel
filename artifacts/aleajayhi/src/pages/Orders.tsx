@@ -57,12 +57,12 @@ export default function Orders() {
   return (
     <div className="flex min-h-screen flex-col bg-background text-foreground">
       <Header />
-      <main className="flex-1 grid place-items-center py-10 px-4">
+      <main className="flex-1 flex items-center justify-center py-10 px-4">
         <motion.form
           initial={{ opacity: 0, y: 14 }}
           animate={{ opacity: 1, y: 0 }}
           onSubmit={handleSubmit}
-          className="w-full max-w-lg space-y-5 rounded-3xl border border-border bg-card p-6 sm:p-8"
+          className="w-full max-w-lg space-y-5 rounded-3xl border border-border bg-card p-6 sm:p-8 mx-auto"
         >
           <div className="text-center space-y-2">
             <div className="w-14 h-14 mx-auto rounded-2xl bg-primary/15 text-primary flex items-center justify-center">
