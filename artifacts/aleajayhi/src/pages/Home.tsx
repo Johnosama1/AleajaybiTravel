@@ -247,35 +247,36 @@ export default function Home() {
                 عروضنا <span className="text-primary">الخاصة</span>
               </h2>
               <p className="text-muted-foreground text-sm sm:text-base">
-                عروض حصرية لشهر مايو — لا تفوّتها!
+                عروض حصرية لشهر مايو — اضغط على العرض لحجز موعدك فوراً!
               </p>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 max-w-4xl mx-auto">
-              <motion.div
-                initial={{ opacity: 0, y: 16 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                className="rounded-2xl overflow-hidden border border-border shadow-sm hover:shadow-xl transition-shadow"
-              >
-                <img
-                  src={offerAutoImage}
-                  alt="عرض السيارة الأوتوماتيك"
-                  className="w-full h-auto object-cover"
-                />
-              </motion.div>
-              <motion.div
-                initial={{ opacity: 0, y: 16 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: 0.1 }}
-                className="rounded-2xl overflow-hidden border border-border shadow-sm hover:shadow-xl transition-shadow"
-              >
-                <img
-                  src={offerManualImage}
-                  alt="عرض السيارة المانيوال"
-                  className="w-full h-auto object-cover"
-                />
-              </motion.div>
+              {[
+                { img: offerAutoImage, transmission: "automatic", alt: "عرض السيارة الأوتوماتيك" },
+                { img: offerManualImage, transmission: "manual", alt: "عرض السيارة المانيوال" },
+              ].map((offer, i) => {
+                const car = cars?.find((c) => c.transmission === offer.transmission) ?? null;
+                return (
+                  <motion.button
+                    key={offer.transmission}
+                    initial={{ opacity: 0, y: 16 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ delay: i * 0.1 }}
+                    whileHover={{ scale: 1.01 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => car && setSelectedCar(car)}
+                    disabled={!car}
+                    className="rounded-2xl overflow-hidden border border-border shadow-sm hover:shadow-xl hover:border-primary/50 transition-all cursor-pointer text-right w-full"
+                  >
+                    <img
+                      src={offer.img}
+                      alt={offer.alt}
+                      className="w-full h-auto object-cover block"
+                    />
+                  </motion.button>
+                );
+              })}
             </div>
           </div>
         </section>
