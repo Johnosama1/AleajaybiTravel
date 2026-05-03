@@ -20,7 +20,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   adminConfirmBooking,
   adminListBookings,
-  adminLogin,
   adminRejectBooking,
   type Booking,
 } from "@workspace/api-client-react";
@@ -30,6 +29,13 @@ import {
   formatArabicDate,
   formatMinutes,
 } from "@/lib/date";
+
+const ADMIN_HASH = "a9baeb9fe0fda2428912f74b2fc22fe4be4c2d2ef76912e4373c086066cfbe3b";
+
+async function sha256(text: string): Promise<string> {
+  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, "0")).join("");
+}
 
 const TOKEN_KEY = "aleajaybi_admin_token";
 
@@ -79,24 +85,26 @@ export default function Admin() {
 }
 
 function AdminLogin({ onLoggedIn }: { onLoggedIn: (token: string) => void }) {
-  const [token, setToken] = useState("");
+  const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const { toast } = useToast();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!token.trim()) return;
+    const trimmed = password.trim();
+    if (!trimmed) return;
     setSubmitting(true);
     try {
-      await adminLogin({ token: token.trim() });
-      writeToken(token.trim());
-      onLoggedIn(token.trim());
+      const hash = await sha256(trimmed);
+      if (hash !== ADMIN_HASH) {
+        toast({ title: "فشل الدخول", description: "كلمة السر غير صحيحة.", variant: "destructive" });
+        return;
+      }
+      writeToken(trimmed);
+      onLoggedIn(trimmed);
       toast({ title: "تم تسجيل الدخول" });
-    } catch (error: unknown) {
-      const msg =
-        (error as { message?: string })?.message ||
-        "كلمة السر غير صحيحة.";
-      toast({ title: "فشل الدخول", description: msg, variant: "destructive" });
+    } catch {
+      toast({ title: "خطأ", description: "حدث خطأ، حاول مرة أخرى.", variant: "destructive" });
     } finally {
       setSubmitting(false);
     }
@@ -129,8 +137,8 @@ function AdminLogin({ onLoggedIn }: { onLoggedIn: (token: string) => void }) {
             <Input
               id="token"
               type="password"
-              value={token}
-              onChange={(e) => setToken(e.target.value)}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
               required
               data-testid="input-admin-token"
