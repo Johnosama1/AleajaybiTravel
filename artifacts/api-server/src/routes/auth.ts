@@ -30,19 +30,18 @@ async function sendOtp(phone: string, code: string): Promise<void> {
     return;
   }
 
-  // Use sandbox fallback if TWILIO_WHATSAPP_FROM is not set or is not a valid Twilio number
-  const rawFrom = process.env.TWILIO_WHATSAPP_FROM ?? "whatsapp:+14155238886";
-  const fromWa = rawFrom.startsWith("whatsapp:") ? rawFrom : `whatsapp:${rawFrom}`;
-  const toWa = `whatsapp:+${phone}`;
-  const body = `🔐 كود التحقق الخاص بك من Aleajaybi Travel:\n\n*${code}*\n\nصالح لمدة 5 دقائق.`;
+  // Send OTP via SMS — use the verified Twilio number from this account
+  const fromSms = "+12526659913";
+  const toSms = `+${phone}`;
+  const body = `كود التحقق الخاص بك من Aleajaybi Travel: ${code}\nصالح لمدة 5 دقائق.`;
 
   try {
     const twilio = (await import("twilio")).default;
     const client = twilio(accountSid, authToken);
-    await client.messages.create({ from: fromWa, to: toWa, body });
-    logger.info({ phone, fromWa, toWa }, "OTP WhatsApp sent");
+    await client.messages.create({ from: fromSms, to: toSms, body });
+    logger.info({ phone, fromSms, toSms }, "OTP SMS sent");
   } catch (err) {
-    logger.error({ err, phone, fromWa, toWa }, "Failed to send OTP WhatsApp");
+    logger.error({ err, phone, fromSms, toSms }, "Failed to send OTP SMS");
   }
 }
 
