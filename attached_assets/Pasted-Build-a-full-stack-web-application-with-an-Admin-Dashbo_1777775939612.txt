@@ -1,0 +1,116 @@
+Build a full-stack web application with an Admin Dashboard and Phone OTP Login system.
+
+Tech Stack:
+
+- Backend: Node.js (Express)
+- Frontend: HTML, CSS, JavaScript
+- Database: MongoDB (or simple in-memory for demo)
+- SMS API: Twilio (use placeholders only, no real credentials)
+
+========================
+USER FEATURES
+
+1) Phone Login (OTP):
+
+- User enters phone number
+- Generate 6-digit OTP
+- Store OTP with 5-minute expiration
+- Send OTP via Twilio
+- Verify OTP:
+  - Success → login
+  - Fail → error
+- Limit attempts to 3
+
+2) Orders System:
+
+- User can create orders
+- Each order is saved in database
+- Each user has a "My Orders" page
+- Show:
+  - Order details
+  - Status
+  - Date
+
+3) User History:
+
+- Every order appears in user history
+- Show details similar to WhatsApp message format
+
+========================
+ADMIN DASHBOARD (SECURE)
+
+Authentication:
+
+- Admin login (separate, secure)
+- Protect all admin routes (middleware)
+
+Features:
+
+1) Full Content Control (CMS):
+
+- Edit website content (text, images, sections)
+- Add new sections (like offers)
+- Delete any section
+
+2) Offers Management:
+
+- Add offers with expiration time (e.g., 24 hours)
+- Auto-delete expired offers (cron job or timer)
+
+3) Orders Tracking:
+
+- All orders appear instantly in admin dashboard
+- No approval required (auto system)
+- Store payment ID (simulate field)
+
+4) Statistics Dashboard:
+
+- Total orders
+- Monthly revenue
+- Yearly revenue
+- Auto calculations
+
+5) Notifications:
+
+- New order appears instantly in admin panel
+
+========================
+SECURITY
+
+- Use JWT authentication
+- Hash sensitive data
+- Rate limit OTP requests
+- Use environment variables ONLY:
+  - TWILIO_ACCOUNT_SID
+  - TWILIO_AUTH_TOKEN
+  - TWILIO_PHONE_NUMBER
+
+========================
+PROJECT STRUCTURE
+
+- /backend
+  - server.js
+  - routes/
+  - controllers/
+  - models/
+  - middleware/
+- /frontend
+  - index.html
+  - login.html
+  - dashboard.html
+  - admin.html
+  - styles.css
+  - script.js
+
+========================
+OUTPUT REQUIRED
+
+- Full working code (backend + frontend)
+- Clean structured files
+- Sample UI (simple but modern)
+- Instructions to run on Replit
+
+IMPORTANT:
+
+- Do NOT include real API keys
+- Use process.env for all secrets
