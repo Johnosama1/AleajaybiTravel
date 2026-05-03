@@ -198,7 +198,7 @@ function AdminDashboard({
 
   useEffect(() => {
     refresh();
-    const t = window.setInterval(refresh, 8000);
+    const t = window.setInterval(refresh, 1000);
     return () => window.clearInterval(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
