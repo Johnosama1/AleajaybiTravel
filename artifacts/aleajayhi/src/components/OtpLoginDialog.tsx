@@ -38,6 +38,7 @@ export function OtpLoginDialog({ open, onOpenChange, onLoggedIn }: Props) {
   const [phone, setPhone] = useState("");
   const [code, setCode] = useState("");
   const [loading, setLoading] = useState(false);
+  const [devCode, setDevCode] = useState<string | null>(null);
 
   const handleSendOtp = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -54,7 +55,13 @@ export function OtpLoginDialog({ open, onOpenChange, onLoggedIn }: Props) {
         toast({ title: "خطأ", description: data.message || "تعذر إرسال الرمز.", variant: "destructive" });
         return;
       }
-      toast({ title: "✅ تم إرسال رمز التحقق", description: "تفقد رسائل الواتساب." });
+      if (data.devCode) {
+        setDevCode(data.devCode);
+        setCode(data.devCode);
+        toast({ title: "وضع التطوير 🛠️", description: `الكود: ${data.devCode}` });
+      } else {
+        toast({ title: "✅ تم إرسال رمز التحقق", description: "تفقد رسائلك." });
+      }
       setStep("otp");
     } catch {
       toast({ title: "خطأ في الاتصال", variant: "destructive" });
@@ -96,6 +103,7 @@ export function OtpLoginDialog({ open, onOpenChange, onLoggedIn }: Props) {
     if (!open) {
       setStep("phone");
       setCode("");
+      setDevCode(null);
     }
     onOpenChange(open);
   };
@@ -133,6 +141,12 @@ export function OtpLoginDialog({ open, onOpenChange, onLoggedIn }: Props) {
           </form>
         ) : (
           <form onSubmit={handleVerifyOtp} className="space-y-4 pt-2">
+            {devCode && (
+              <div className="rounded-lg border-2 border-amber-400 bg-amber-50 px-4 py-3 text-center">
+                <p className="text-xs font-semibold text-amber-700 mb-1">🛠️ وضع التطوير — الكود</p>
+                <p className="text-3xl font-mono font-extrabold tracking-widest text-amber-800">{devCode}</p>
+              </div>
+            )}
             <div className="space-y-1.5">
               <Label htmlFor="otp-code">رمز التحقق</Label>
               <Input

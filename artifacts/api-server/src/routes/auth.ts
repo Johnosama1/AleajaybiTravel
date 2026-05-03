@@ -105,7 +105,12 @@ router.post("/auth/send-otp", (req, res, next) => {
     await sendOtp(phone, code);
 
     logger.info({ phone }, "OTP session created");
-    res.json({ ok: true, message: "تم إرسال رمز التحقق." });
+    const isDev = process.env.NODE_ENV !== "production";
+    res.json({
+      ok: true,
+      message: "تم إرسال رمز التحقق.",
+      ...(isDev ? { devCode: code } : {}),
+    });
   })().catch(next);
 });
 
