@@ -22,25 +22,26 @@ function normalizePhone(raw: string): string {
   return raw.replace(/\s+/g, "").replace(/^0/, "20");
 }
 
-async function sendSmsOtp(phone: string, code: string): Promise<void> {
+async function sendOtp(phone: string, code: string): Promise<void> {
   const accountSid = process.env.TWILIO_ACCOUNT_SID;
   const authToken = process.env.TWILIO_AUTH_TOKEN;
-  const fromNumber = process.env.TWILIO_PHONE_NUMBER;
+  const whatsappFrom = process.env.TWILIO_WHATSAPP_FROM;
 
-  if (!accountSid || !authToken || !fromNumber) {
-    logger.warn({ phone, code }, "Twilio SMS not configured — OTP logged only");
+  if (!accountSid || !authToken || !whatsappFrom) {
+    logger.warn({ phone, code }, "Twilio WhatsApp not configured — OTP logged only");
     return;
   }
+
+  const body = `🔐 كود التحقق الخاص بك من Aleajaybi Travel هو:\n\n*${code}*\n\nصالح لمدة 5 دقائق. لا تشاركه مع أحد.`;
+  const fromWa = whatsappFrom.startsWith("whatsapp:") ? whatsappFrom : `whatsapp:${whatsappFrom}`;
+  const toWa = `whatsapp:+${phone}`;
+
   try {
     const client = twilio(accountSid, authToken);
-    await client.messages.create({
-      from: fromNumber,
-      to: `+${phone}`,
-      body: `كود التحقق الخاص بك من Aleajaybi Travel هو: ${code} — صالح لمدة 5 دقائق.`,
-    });
-    logger.info({ phone }, "OTP SMS sent");
+    await client.messages.create({ from: fromWa, to: toWa, body });
+    logger.info({ phone }, "OTP WhatsApp sent");
   } catch (err) {
-    logger.error({ err, phone }, "Failed to send OTP SMS");
+    logger.error({ err, phone }, "Failed to send OTP WhatsApp");
   }
 }
 
@@ -101,7 +102,7 @@ router.post("/auth/send-otp", (req, res, next) => {
 
     rateLimitMap.set(phone, Date.now());
 
-    await sendSmsOtp(phone, code);
+    await sendOtp(phone, code);
 
     logger.info({ phone }, "OTP session created");
     res.json({ ok: true, message: "تم إرسال رمز التحقق." });

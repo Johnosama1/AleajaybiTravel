@@ -54,7 +54,7 @@ export function OtpLoginDialog({ open, onOpenChange, onLoggedIn }: Props) {
         toast({ title: "خطأ", description: data.message || "تعذر إرسال الرمز.", variant: "destructive" });
         return;
       }
-      toast({ title: "✅ تم إرسال رمز التحقق", description: "تفقد رسائل SMS." });
+      toast({ title: "✅ تم إرسال رمز التحقق", description: "تفقد رسائل الواتساب." });
       setStep("otp");
     } catch {
       toast({ title: "خطأ في الاتصال", variant: "destructive" });
@@ -123,7 +123,7 @@ export function OtpLoginDialog({ open, onOpenChange, onLoggedIn }: Props) {
                 onChange={(e) => setPhone(e.target.value)}
                 required
               />
-              <p className="text-xs text-muted-foreground">سنرسل لك رمز تحقق SMS.</p>
+              <p className="text-xs text-muted-foreground">سنرسل لك رمز تحقق عبر واتساب.</p>
             </div>
             <Button type="submit" className="w-full font-extrabold" disabled={loading}>
               {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : (
