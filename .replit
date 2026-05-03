@@ -90,4 +90,4 @@ build = ["bash", "-c", "pnpm install && PORT=5000 BASE_PATH=/ pnpm --filter @wor
 [userenv]
 
 [userenv.shared]
-ADMIN_TOKEN = "aleajaybi-admin-2024"
+ADMIN_TOKEN = "J12345o12345@"
