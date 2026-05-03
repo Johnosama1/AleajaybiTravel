@@ -8,6 +8,8 @@ import BookingsTaken from "@/pages/BookingsTaken";
 import Contact from "@/pages/Contact";
 import BookingPayment from "@/pages/BookingPayment";
 import Admin from "@/pages/Admin";
+import Orders from "@/pages/Orders";
+import OrderStatus from "@/pages/OrderStatus";
 
 const queryClient = new QueryClient();
 
@@ -19,6 +21,8 @@ function Router() {
       <Route path="/contact" component={Contact} />
       <Route path="/booking/:id" component={BookingPayment} />
       <Route path="/admin" component={Admin} />
+      <Route path="/orders" component={Orders} />
+      <Route path="/orders/:id" component={OrderStatus} />
       <Route component={NotFound} />
     </Switch>
   );
