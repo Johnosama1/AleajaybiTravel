@@ -2,7 +2,6 @@ import { Router, type IRouter, type Request, type Response, type NextFunction } 
 import { eq, and, lt } from "drizzle-orm";
 import { z } from "zod";
 import crypto from "crypto";
-import twilio from "twilio";
 import { db, otpSessionsTable, userSessionsTable, bookingsTable } from "@workspace/db";
 import { logger } from "../lib/logger.js";
 
@@ -32,16 +31,19 @@ async function sendOtp(phone: string, code: string): Promise<void> {
     return;
   }
 
-  const body = `🔐 كود التحقق الخاص بك من Aleajaybi Travel هو:\n\n*${code}*\n\nصالح لمدة 5 دقائق. لا تشاركه مع أحد.`;
+  // Normalize from: ensure it has whatsapp: prefix
   const fromWa = whatsappFrom.startsWith("whatsapp:") ? whatsappFrom : `whatsapp:${whatsappFrom}`;
+  // Normalize to: phone is already normalized (starts with country code, no +)
   const toWa = `whatsapp:+${phone}`;
+  const body = `🔐 كود التحقق الخاص بك من Aleajaybi Travel:\n\n*${code}*\n\nصالح لمدة 5 دقائق.`;
 
   try {
+    const twilio = (await import("twilio")).default;
     const client = twilio(accountSid, authToken);
     await client.messages.create({ from: fromWa, to: toWa, body });
-    logger.info({ phone }, "OTP WhatsApp sent");
+    logger.info({ phone, fromWa, toWa }, "OTP WhatsApp sent");
   } catch (err) {
-    logger.error({ err, phone }, "Failed to send OTP WhatsApp");
+    logger.error({ err, phone, fromWa, toWa }, "Failed to send OTP WhatsApp");
   }
 }
 
