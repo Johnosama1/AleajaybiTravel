@@ -26,8 +26,25 @@ function getCarImage(car: Car): string {
 }
 
 export default function Home() {
-  const { data: cars, isLoading: carsLoading, isError: carsError, refetch: refetchCars } = useListCars();
-  const { data: stats } = useGetBookingStats();
+  const {
+    data: cars,
+    isLoading: carsLoading,
+    isError: carsError,
+    isFetching: carsFetching,
+    refetch: refetchCars,
+  } = useListCars({
+    query: {
+      retry: 10,
+      retryDelay: 2000,
+      refetchOnWindowFocus: true,
+      refetchOnMount: true,
+      refetchInterval: (query) =>
+        query.state.status === "error" ? 3000 : false,
+    },
+  });
+  const { data: stats } = useGetBookingStats({
+    query: { retry: 5, retryDelay: 2000 },
+  });
   const [selectedCar, setSelectedCar] = useState<Car | null>(null);
 
   const scrollToCars = () => {
@@ -139,12 +156,12 @@ export default function Home() {
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 sm:gap-7 max-w-4xl mx-auto">
-              {carsError ? (
+              {carsError && !carsFetching ? (
                 <div className="col-span-full flex flex-col items-center gap-4 py-10 text-center">
-                  <p className="text-muted-foreground text-sm">تعذّر تحميل السيارات. تحقق من اتصالك وحاول مجدداً.</p>
-                  <Button variant="outline" onClick={() => refetchCars()}>إعادة المحاولة</Button>
+                  <p className="text-muted-foreground text-sm">تعذّر تحميل السيارات. جارٍ إعادة المحاولة...</p>
+                  <Button variant="outline" onClick={() => refetchCars()}>إعادة المحاولة الآن</Button>
                 </div>
-              ) : carsLoading || !cars
+              ) : carsLoading || carsFetching || !cars
                 ? Array.from({ length: 2 }).map((_, i) => (
                     <div
                       key={i}
