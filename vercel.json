@@ -1,0 +1,15 @@
+{
+  "version": 2,
+  "installCommand": "pnpm install",
+  "buildCommand": "PORT=5000 BASE_PATH=/ pnpm --filter @workspace/aleajayhi run build",
+  "outputDirectory": "artifacts/aleajayhi/dist/public",
+  "functions": {
+    "api/index.ts": {
+      "maxDuration": 30
+    }
+  },
+  "rewrites": [
+    { "source": "/api/:path*", "destination": "/api/index.ts" },
+    { "source": "/((?!api).*)", "destination": "/index.html" }
+  ]
+}
