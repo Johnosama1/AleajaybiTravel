@@ -252,8 +252,8 @@ export default function Home() {
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 max-w-4xl mx-auto">
               {[
-                { img: offerManualImage, transmission: "manual", alt: "عرض السيارة المانيوال" },
-                { img: offerAutoImage, transmission: "automatic", alt: "عرض السيارة الأوتوماتيك" },
+                { img: offerManualImage, transmission: "automatic", alt: "عرض فيات 128" },
+                { img: offerAutoImage, transmission: "manual", alt: "عرض نيسان صاني" },
               ].map((offer, i) => {
                 const car = cars?.find((c) => c.transmission === offer.transmission) ?? null;
                 return (
