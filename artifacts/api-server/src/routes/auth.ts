@@ -24,16 +24,15 @@ function normalizePhone(raw: string): string {
 async function sendOtp(phone: string, code: string): Promise<void> {
   const accountSid = process.env.TWILIO_ACCOUNT_SID;
   const authToken = process.env.TWILIO_AUTH_TOKEN;
-  const whatsappFrom = process.env.TWILIO_WHATSAPP_FROM;
 
-  if (!accountSid || !authToken || !whatsappFrom) {
-    logger.warn({ phone, code }, "Twilio WhatsApp not configured — OTP logged only");
+  if (!accountSid || !authToken) {
+    logger.warn({ phone, code }, "Twilio credentials not configured — OTP logged only");
     return;
   }
 
-  // Normalize from: ensure it has whatsapp: prefix
-  const fromWa = whatsappFrom.startsWith("whatsapp:") ? whatsappFrom : `whatsapp:${whatsappFrom}`;
-  // Normalize to: phone is already normalized (starts with country code, no +)
+  // Use sandbox fallback if TWILIO_WHATSAPP_FROM is not set or is not a valid Twilio number
+  const rawFrom = process.env.TWILIO_WHATSAPP_FROM ?? "whatsapp:+14155238886";
+  const fromWa = rawFrom.startsWith("whatsapp:") ? rawFrom : `whatsapp:${rawFrom}`;
   const toWa = `whatsapp:+${phone}`;
   const body = `🔐 كود التحقق الخاص بك من Aleajaybi Travel:\n\n*${code}*\n\nصالح لمدة 5 دقائق.`;
 
