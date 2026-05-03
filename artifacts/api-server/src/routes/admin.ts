@@ -117,6 +117,7 @@ router.post("/admin/bookings/:id/confirm", requireAdmin, (req, res, next) => {
       phone: updated.phone,
       day: dayLabel,
       time: `${hh}:${mm}`,
+      weekStart: updated.weekStart,
       sessions: updated.sessionsCount,
       amount: updated.priceEgp,
       method: updated.paymentMethod ?? "vodafone_cash",
@@ -130,7 +131,7 @@ router.post("/admin/bookings/:id/confirm", requireAdmin, (req, res, next) => {
 
     res.json({
       booking: serializeBooking(updated),
-      whatsappUrl: buildTrainerWhatsappUrl(updated),
+      whatsappUrl: buildTrainerWhatsappUrl(updated, carType),
     });
   })().catch(next);
 });

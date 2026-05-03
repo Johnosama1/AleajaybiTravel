@@ -89,7 +89,7 @@ export function serializeBooking(b: BookingRow) {
   };
 }
 
-export function buildTrainerWhatsappUrl(b: BookingRow): string {
+export function buildTrainerWhatsappUrl(b: BookingRow, carType?: string): string {
   const dayNamesAr = [
     "السبت",
     "الأحد",
@@ -104,21 +104,19 @@ export function buildTrainerWhatsappUrl(b: BookingRow): string {
     .toString()
     .padStart(2, "0");
   const mm = (b.startMinutes % 60).toString().padStart(2, "0");
+  const methodLabel = b.paymentMethod === "instapay" ? "InstaPay" : "Vodafone Cash";
   const lines = [
-    "🚗 *حجز جديد مدفوع — Aleajaybi Travel*",
-    "",
-    `👤 الاسم: ${b.name}`,
-    `📞 الهاتف: ${b.phone}`,
-    `🗓️ بداية الأسبوع: ${b.weekStart}`,
-    `📅 اليوم: ${day}`,
-    `🕒 الموعد: ${hh}:${mm}`,
-    `📚 عدد الحصص: ${b.sessionsCount}`,
+    "👋مرحباً، أود تأكيد حجزي لتدريب القيادة.",
+    `👤الاسم: ${b.name}`,
+    `📱الموبايل: ${b.phone}`,
+    `📆اليوم: ${day}`,
+    `🕧الساعة: ${hh}:${mm}`,
+    `🧾بداية الأسبوع: ${b.weekStart}`,
+    `🚗نوع السياره: ${carType ?? "غير محدد"}`,
+    `🎓 عدد الحصص: ${b.sessionsCount}`,
     `💵 المبلغ: ${b.priceEgp} ج.م`,
-    `💳 طريقة الدفع: ${
-      b.paymentMethod === "instapay" ? "InstaPay" : "Vodafone Cash"
-    }`,
-    `🔖 رقم العملية: ${b.paymentReference ?? "-"}`,
-    "✅ تم تأكيد استلام المبلغ.",
+    `📇 طريقة الدفع: ${methodLabel}`,
+    "🎉 تم تأكيد استلام المبلغ.",
   ];
   const text = encodeURIComponent(lines.join("\n"));
   return `https://wa.me/${WHATSAPP_PHONE}?text=${text}`;

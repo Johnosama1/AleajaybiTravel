@@ -56,17 +56,16 @@ export function buildBookingCreatedMessage(data: {
   const day = DAY_NAMES_AR[data.dayOfWeek] ?? `يوم ${data.dayOfWeek}`;
   const carTypeLabel = data.carType === "automatic" ? "أوتوماتيك" : "مانيوال";
   return [
-    `🚗 *طلب حجز جديد — Aleajaybi Travel*`,
-    "",
-    `👤 الاسم: ${data.name}`,
-    `📞 الهاتف: ${data.phone}`,
-    `📅 اليوم: ${day}`,
-    `🕒 الموعد: ${formatMinutes(data.startMinutes)}`,
-    `📚 عدد الحصص: ${data.sessions} حصص (1 ساعة/حصة)`,
-    `💵 المبلغ المدفوع: ${data.amount} ج.م`,
-    `🚙 السيارة: ${data.carName} (${carTypeLabel})`,
-    "",
-    "⏳ في انتظار تأكيد الدفع من الطالب.",
+    "👋مرحباً، أود تأكيد حجزي لتدريب القيادة.",
+    `👤الاسم: ${data.name}`,
+    `📱الموبايل: ${data.phone}`,
+    `📆اليوم: ${day}`,
+    `🕧الساعة: ${formatMinutes(data.startMinutes)}`,
+    `🧾بداية الأسبوع: ${data.weekStart}`,
+    `🚗نوع السياره: ${data.carName} (${carTypeLabel})`,
+    `🎓 عدد الحصص: ${data.sessions}`,
+    `💵 المبلغ: ${data.amount} ج.م`,
+    "⏳ في انتظار تأكيد الدفع.",
   ].join("\n");
 }
 
@@ -86,19 +85,17 @@ export function buildPaymentSubmittedMessage(data: {
   const methodLabel = data.method === "instapay" ? "InstaPay" : "Vodafone Cash";
   const carTypeLabel = data.carType === "automatic" ? "أوتوماتيك" : "مانيوال";
   return [
-    `✅ *تم إرسال إيصال الدفع — Aleajaybi Travel*`,
-    "",
-    `👤 الاسم: ${data.name}`,
-    `📞 الهاتف: ${data.phone}`,
-    `📅 اليوم: ${day}`,
-    `🕒 الموعد: ${formatMinutes(data.startMinutes)}`,
-    `📚 عدد الحصص: ${data.sessions} حصص (1 ساعة/حصة)`,
+    "👋مرحباً، أود تأكيد حجزي لتدريب القيادة.",
+    `👤الاسم: ${data.name}`,
+    `📱الموبايل: ${data.phone}`,
+    `📆اليوم: ${day}`,
+    `🕧الساعة: ${formatMinutes(data.startMinutes)}`,
+    `🚗نوع السياره: ${data.carName} (${carTypeLabel})`,
+    `🎓 عدد الحصص: ${data.sessions}`,
     `💵 المبلغ: ${data.amount} ج.م`,
-    `💳 طريقة الدفع: ${methodLabel}`,
+    `📇 طريقة الدفع: ${methodLabel}`,
     `🔖 رقم العملية: ${data.reference || "-"}`,
-    `🚙 السيارة: ${data.carName} (${carTypeLabel})`,
-    "",
-    "✅ الرجاء تأكيد استلام المبلغ وتفعيل الحجز.",
+    "🎉 تم تأكيد استلام المبلغ.",
   ].join("\n");
 }
 
@@ -107,6 +104,7 @@ export function buildPaymentWhatsAppMessage(data: {
   phone: string;
   day: string;
   time: string;
+  weekStart?: string;
   sessions: number;
   amount: number;
   method: string;
@@ -117,18 +115,16 @@ export function buildPaymentWhatsAppMessage(data: {
     data.method === "instapay" ? "InstaPay" : "Vodafone Cash";
 
   return [
-    "🚗 *حجز جديد مدفوع — Aleajaybi Travel*",
-    "",
-    `👤 الاسم: ${data.name}`,
-    `📞 الهاتف: ${data.phone}`,
-    `📅 اليوم: ${data.day}`,
-    `🕒 الموعد: ${data.time}`,
-    `📚 عدد الحصص: ${data.sessions}`,
+    "👋مرحباً، أود تأكيد حجزي لتدريب القيادة.",
+    `👤الاسم: ${data.name}`,
+    `📱الموبايل: ${data.phone}`,
+    `📆اليوم: ${data.day}`,
+    `🕧الساعة: ${data.time}`,
+    ...(data.weekStart ? [`🧾بداية الأسبوع: ${data.weekStart}`] : []),
+    `🚗نوع السياره: ${data.carType}`,
+    `🎓 عدد الحصص: ${data.sessions}`,
     `💵 المبلغ: ${data.amount} ج.م`,
-    `💳 طريقة الدفع: ${methodLabel}`,
-    `🔖 رقم العملية: ${data.transactionId}`,
-    `🚙 نوع السيارة: ${data.carType}`,
-    "",
-    "✅ الرجاء تأكيد استلام المبلغ وتفعيل الحجز.",
+    `📇 طريقة الدفع: ${methodLabel}`,
+    "🎉 تم تأكيد استلام المبلغ.",
   ].join("\n");
 }
