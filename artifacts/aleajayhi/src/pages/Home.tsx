@@ -13,8 +13,8 @@ import { CalendarDays, ShieldCheck, Sparkles, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import logoImage from "@assets/photo_2026-04-28_17-50-50_1777391528214.jpg";
-import nissanImage from "@assets/photo_2026-04-28_17-50-56_1777391528214.jpg";
-import fiatImage from "@assets/photo_2026-04-28_17-51-01_1777391528213.jpg";
+import nissanImage from "@assets/photo_2026-04-28_17-51-01_1777391528213.jpg";
+import fiatImage from "@assets/photo_2026-04-28_17-50-56_1777391528214.jpg";
 import offerAutoImage from "@assets/photo_2026-05-03_03-17-47_1777771087443.jpg";
 import offerManualImage from "@assets/photo_2026-05-03_03-17-55_1777771121436.jpg";
 
@@ -252,8 +252,8 @@ export default function Home() {
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 max-w-4xl mx-auto">
               {[
-                { img: offerManualImage, transmission: "automatic", alt: "عرض فيات 128" },
-                { img: offerAutoImage, transmission: "manual", alt: "عرض نيسان صاني" },
+                { img: offerManualImage, transmission: "manual", alt: "عرض فيات 128" },
+                { img: offerAutoImage, transmission: "automatic", alt: "عرض نيسان صاني" },
               ].map((offer, i) => {
                 const car = cars?.find((c) => c.transmission === offer.transmission) ?? null;
                 return (
