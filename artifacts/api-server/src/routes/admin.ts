@@ -1,5 +1,5 @@
 import { Router, type IRouter, type Request, type Response, type NextFunction } from "express";
-import { asc, eq } from "drizzle-orm";
+import { asc, eq, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db, bookingsTable, carsTable } from "@workspace/db";
 import { serializeBooking, buildTrainerWhatsappUrl } from "./bookings.js";
@@ -164,6 +164,72 @@ router.post("/admin/bookings/:id/reject", requireAdmin, (req, res, next) => {
       return;
     }
     res.json(serializeBooking(updated));
+  })().catch(next);
+});
+
+router.get("/admin/stats", requireAdmin, (_req, res, next) => {
+  (async () => {
+    const now = new Date();
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+    const yearStart = new Date(now.getFullYear(), 0, 1).toISOString();
+
+    const [{ total }] = await db
+      .select({ total: sql<number>`count(*)::int` })
+      .from(bookingsTable);
+
+    const [{ paid }] = await db
+      .select({ paid: sql<number>`count(*)::int` })
+      .from(bookingsTable)
+      .where(eq(bookingsTable.paymentStatus, "paid"));
+
+    const [{ submitted }] = await db
+      .select({ submitted: sql<number>`count(*)::int` })
+      .from(bookingsTable)
+      .where(eq(bookingsTable.paymentStatus, "submitted"));
+
+    const [{ totalRevenue }] = await db
+      .select({ totalRevenue: sql<number>`coalesce(sum(price_egp), 0)::int` })
+      .from(bookingsTable)
+      .where(eq(bookingsTable.paymentStatus, "paid"));
+
+    const [{ monthlyRevenue }] = await db
+      .select({ monthlyRevenue: sql<number>`coalesce(sum(price_egp), 0)::int` })
+      .from(bookingsTable)
+      .where(
+        sql`payment_status = 'paid' and paid_at >= ${monthStart}::timestamptz`
+      );
+
+    const [{ yearlyRevenue }] = await db
+      .select({ yearlyRevenue: sql<number>`coalesce(sum(price_egp), 0)::int` })
+      .from(bookingsTable)
+      .where(
+        sql`payment_status = 'paid' and paid_at >= ${yearStart}::timestamptz`
+      );
+
+    const [{ monthlyCount }] = await db
+      .select({ monthlyCount: sql<number>`count(*)::int` })
+      .from(bookingsTable)
+      .where(
+        sql`payment_status = 'paid' and paid_at >= ${monthStart}::timestamptz`
+      );
+
+    const [{ yearlyCount }] = await db
+      .select({ yearlyCount: sql<number>`count(*)::int` })
+      .from(bookingsTable)
+      .where(
+        sql`payment_status = 'paid' and paid_at >= ${yearStart}::timestamptz`
+      );
+
+    res.json({
+      total: total ?? 0,
+      paid: paid ?? 0,
+      submitted: submitted ?? 0,
+      totalRevenue: totalRevenue ?? 0,
+      monthlyRevenue: monthlyRevenue ?? 0,
+      yearlyRevenue: yearlyRevenue ?? 0,
+      monthlyCount: monthlyCount ?? 0,
+      yearlyCount: yearlyCount ?? 0,
+    });
   })().catch(next);
 });
 

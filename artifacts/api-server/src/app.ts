@@ -6,6 +6,8 @@ import fs from "fs";
 import { fileURLToPath } from "url";
 import router from "./routes";
 import { logger } from "./lib/logger";
+import { cleanupExpiredOtps } from "./routes/auth.js";
+import { cleanupExpiredOffers } from "./routes/offers.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -44,6 +46,11 @@ app.use("/api", (_req, res, next) => {
   next();
 });
 app.use("/api", router);
+
+// Cleanup expired OTP sessions every 2 minutes
+setInterval(() => { cleanupExpiredOtps().catch(() => {}); }, 2 * 60 * 1000);
+// Cleanup expired offers every minute
+setInterval(() => { cleanupExpiredOffers().catch(() => {}); }, 60 * 1000);
 
 const panelFile = path.resolve(__dirname, "public", "panel.html");
 if (fs.existsSync(panelFile)) {

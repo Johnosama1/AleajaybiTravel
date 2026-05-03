@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import {
   CheckCircle2,
@@ -10,6 +10,10 @@ import {
   ShieldCheck,
   XCircle,
   ClipboardList,
+  BarChart3,
+  ImagePlus,
+  Trash2,
+  Tag,
 } from "lucide-react";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
@@ -174,6 +178,26 @@ interface Order {
   processedAt: string | null;
 }
 
+interface AdminStats {
+  total: number;
+  paid: number;
+  submitted: number;
+  totalRevenue: number;
+  monthlyRevenue: number;
+  yearlyRevenue: number;
+  monthlyCount: number;
+  yearlyCount: number;
+}
+
+interface AdminOffer {
+  id: number;
+  title: string;
+  imageData: string;
+  carTransmission: string | null;
+  expiresAt: string | null;
+  createdAt: string;
+}
+
 const PAYMENT_LABELS: Record<string, string> = {
   cash: "كاش",
   transfer: "تحويل بنكي",
@@ -202,7 +226,7 @@ function AdminDashboard({ token, onLogout }: { token: string; onLogout: () => vo
           <div className="flex items-center justify-between gap-3 flex-wrap">
             <div>
               <h1 className="text-xl sm:text-2xl font-extrabold text-primary">لوحة الإدارة</h1>
-              <p className="text-sm text-muted-foreground">راجع الطلبات والحجوزات.</p>
+              <p className="text-sm text-muted-foreground">راجع الطلبات والحجوزات والإحصائيات.</p>
             </div>
             <Button size="sm" variant="ghost" onClick={onLogout} data-testid="button-admin-logout">
               <LogOut className="h-4 w-4 ml-1" />
@@ -210,28 +234,301 @@ function AdminDashboard({ token, onLogout }: { token: string; onLogout: () => vo
             </Button>
           </div>
 
-          <Tabs defaultValue="orders">
-            <TabsList className="grid grid-cols-2 w-full">
+          <Tabs defaultValue="bookings">
+            <TabsList className="grid grid-cols-4 w-full">
+              <TabsTrigger value="bookings">الحجوزات</TabsTrigger>
               <TabsTrigger value="orders">
                 <ClipboardList className="h-4 w-4 ml-1" />
                 الطلبات
               </TabsTrigger>
-              <TabsTrigger value="bookings">
-                الحجوزات
+              <TabsTrigger value="stats">
+                <BarChart3 className="h-4 w-4 ml-1" />
+                إحصائيات
+              </TabsTrigger>
+              <TabsTrigger value="offers">
+                <Tag className="h-4 w-4 ml-1" />
+                العروض
               </TabsTrigger>
             </TabsList>
+
+            <TabsContent value="bookings" className="mt-4">
+              <BookingsPanel token={token} onLogout={onLogout} />
+            </TabsContent>
 
             <TabsContent value="orders" className="mt-4">
               <OrdersPanel token={token} />
             </TabsContent>
 
-            <TabsContent value="bookings" className="mt-4">
-              <BookingsPanel token={token} onLogout={onLogout} />
+            <TabsContent value="stats" className="mt-4">
+              <StatsPanel token={token} />
+            </TabsContent>
+
+            <TabsContent value="offers" className="mt-4">
+              <OffersPanel token={token} />
             </TabsContent>
           </Tabs>
         </div>
       </main>
       <Footer />
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────
+// Stats Panel
+// ─────────────────────────────────────────────
+
+function StatCard({ label, value, sub }: { label: string; value: string | number; sub?: string }) {
+  return (
+    <div className="rounded-2xl border border-border bg-card p-5 text-center space-y-1">
+      <div className="text-3xl font-black text-primary">{value}</div>
+      <div className="text-sm font-bold text-foreground">{label}</div>
+      {sub && <div className="text-xs text-muted-foreground">{sub}</div>}
+    </div>
+  );
+}
+
+function StatsPanel({ token }: { token: string }) {
+  const [stats, setStats] = useState<AdminStats | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  const refresh = async () => {
+    try {
+      const res = await fetch("/api/admin/stats", { headers: { "X-Admin-Token": token } });
+      if (res.ok) setStats(await res.json());
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    refresh();
+    const t = window.setInterval(refresh, 10_000);
+    return () => window.clearInterval(t);
+  }, [token]);
+
+  if (loading) return <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>;
+  if (!stats) return <EmptyState text="تعذّر تحميل الإحصائيات." />;
+
+  const now = new Date();
+  const monthName = now.toLocaleDateString("ar-EG", { month: "long" });
+  const year = now.getFullYear();
+
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+        <StatCard label="إجمالي الحجوزات" value={stats.total} />
+        <StatCard label="حجوزات مؤكدة" value={stats.paid} />
+        <StatCard label="بانتظار المراجعة" value={stats.submitted} />
+        <StatCard label="إجمالي الإيرادات" value={`${stats.totalRevenue} ج.م`} />
+        <StatCard label={`إيرادات ${monthName}`} value={`${stats.monthlyRevenue} ج.م`} sub={`${stats.monthlyCount} حجز`} />
+        <StatCard label={`إيرادات ${year}`} value={`${stats.yearlyRevenue} ج.م`} sub={`${stats.yearlyCount} حجز`} />
+      </div>
+      <div className="text-center">
+        <Button variant="ghost" size="sm" onClick={refresh}>
+          <RefreshCw className="h-4 w-4 ml-1" />
+          تحديث
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────
+// Offers Panel
+// ─────────────────────────────────────────────
+
+function OffersPanel({ token }: { token: string }) {
+  const { toast } = useToast();
+  const [offers, setOffers] = useState<AdminOffer[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [creating, setCreating] = useState(false);
+  const [imageData, setImageData] = useState<string | null>(null);
+  const [title, setTitle] = useState("");
+  const [transmission, setTransmission] = useState<"" | "manual" | "automatic">("");
+  const [expiresInHours, setExpiresInHours] = useState("");
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  const refresh = async () => {
+    try {
+      const res = await fetch("/api/admin/offers", { headers: { "X-Admin-Token": token } });
+      if (res.ok) setOffers(await res.json());
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { refresh(); }, [token]);
+
+  const handleImage = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      toast({ title: "الصورة كبيرة جداً", description: "الحد الأقصى 5MB", variant: "destructive" });
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => setImageData(reader.result as string);
+    reader.readAsDataURL(file);
+  };
+
+  const handleCreate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!imageData) {
+      toast({ title: "اختر صورة للعرض", variant: "destructive" });
+      return;
+    }
+    setCreating(true);
+    try {
+      const res = await fetch("/api/admin/offers", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-Admin-Token": token },
+        body: JSON.stringify({
+          title,
+          imageData,
+          carTransmission: transmission || null,
+          expiresInHours: expiresInHours ? Number(expiresInHours) : null,
+        }),
+      });
+      if (!res.ok) throw new Error();
+      toast({ title: "تم إضافة العرض ✅" });
+      setTitle(""); setImageData(null); setTransmission(""); setExpiresInHours("");
+      if (fileRef.current) fileRef.current.value = "";
+      await refresh();
+    } catch {
+      toast({ title: "خطأ", description: "تعذّر إضافة العرض.", variant: "destructive" });
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  const handleDelete = async (id: number) => {
+    try {
+      await fetch(`/api/admin/offers/${id}`, {
+        method: "DELETE",
+        headers: { "X-Admin-Token": token },
+      });
+      toast({ title: "تم حذف العرض" });
+      await refresh();
+    } catch {
+      toast({ title: "خطأ في الحذف", variant: "destructive" });
+    }
+  };
+
+  return (
+    <div className="space-y-5">
+      {/* Add offer form */}
+      <div className="rounded-2xl border border-border bg-card p-4 sm:p-5 space-y-4">
+        <h3 className="font-extrabold text-base">إضافة عرض جديد</h3>
+        <form onSubmit={handleCreate} className="space-y-3">
+          <div className="space-y-1.5">
+            <Label>عنوان العرض (اختياري)</Label>
+            <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="مثال: عرض مايو الخاص" />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label>صورة العرض *</Label>
+            {imageData ? (
+              <div className="relative rounded-xl overflow-hidden border border-border">
+                <img src={imageData} alt="preview" className="w-full max-h-40 object-contain bg-muted" />
+                <Button
+                  type="button" size="sm" variant="destructive"
+                  className="absolute top-2 left-2 h-7 w-7 p-0"
+                  onClick={() => { setImageData(null); if (fileRef.current) fileRef.current.value = ""; }}
+                >
+                  <XCircle className="h-4 w-4" />
+                </Button>
+              </div>
+            ) : (
+              <label className="flex flex-col items-center gap-2 rounded-xl border-2 border-dashed border-border p-4 cursor-pointer hover:border-primary/50 transition-colors">
+                <ImagePlus className="h-6 w-6 text-muted-foreground" />
+                <span className="text-sm text-muted-foreground">اضغط لرفع صورة العرض</span>
+                <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleImage} />
+              </label>
+            )}
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label>نوع السيارة</Label>
+              <select
+                className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm"
+                value={transmission}
+                onChange={(e) => setTransmission(e.target.value as "" | "manual" | "automatic")}
+              >
+                <option value="">كل السيارات</option>
+                <option value="manual">مانيوال (فيات 128)</option>
+                <option value="automatic">أوتوماتيك (نيسان صاني)</option>
+              </select>
+            </div>
+            <div className="space-y-1.5">
+              <Label>ينتهي بعد (ساعات)</Label>
+              <Input
+                type="number"
+                min="1"
+                placeholder="لا ينتهي"
+                value={expiresInHours}
+                onChange={(e) => setExpiresInHours(e.target.value)}
+                dir="ltr"
+              />
+            </div>
+          </div>
+
+          <Button type="submit" className="w-full font-extrabold" disabled={creating}>
+            {creating ? <Loader2 className="h-4 w-4 animate-spin" /> : "إضافة العرض"}
+          </Button>
+        </form>
+      </div>
+
+      {/* Existing offers */}
+      {loading ? (
+        <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
+      ) : offers.length === 0 ? (
+        <EmptyState text="لا توجد عروض حالياً. أضف أول عرض من الأعلى." />
+      ) : (
+        <div className="space-y-3">
+          <h3 className="font-extrabold text-sm text-muted-foreground">العروض الحالية ({offers.length})</h3>
+          {offers.map((offer) => {
+            const expired = offer.expiresAt && new Date(offer.expiresAt) < new Date();
+            return (
+              <motion.div
+                key={offer.id}
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                className={`rounded-2xl border bg-card p-4 flex items-center gap-3 ${expired ? "opacity-60 border-red-500/30" : "border-border"}`}
+              >
+                <img src={offer.imageData} alt={offer.title} className="w-20 h-14 object-cover rounded-lg shrink-0" />
+                <div className="flex-1 min-w-0 space-y-1">
+                  {offer.title && <div className="font-bold text-sm truncate">{offer.title}</div>}
+                  <div className="flex flex-wrap gap-1.5">
+                    {offer.carTransmission && (
+                      <Badge variant="secondary" className="text-xs">
+                        {offer.carTransmission === "manual" ? "مانيوال" : "أوتوماتيك"}
+                      </Badge>
+                    )}
+                    {expired ? (
+                      <Badge className="bg-red-500/15 text-red-600 border border-red-500/30 text-xs">منتهي</Badge>
+                    ) : offer.expiresAt ? (
+                      <Badge className="bg-amber-500/15 text-amber-600 border border-amber-500/30 text-xs">
+                        ينتهي {new Date(offer.expiresAt).toLocaleDateString("ar-EG")}
+                      </Badge>
+                    ) : (
+                      <Badge className="bg-green-500/15 text-green-600 border border-green-500/30 text-xs">دائم</Badge>
+                    )}
+                  </div>
+                </div>
+                <Button
+                  size="sm" variant="ghost"
+                  className="text-destructive hover:text-destructive shrink-0"
+                  onClick={() => handleDelete(offer.id)}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </motion.div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
@@ -312,15 +609,9 @@ function OrdersPanel({ token }: { token: string }) {
   return (
     <Tabs defaultValue="pending">
       <TabsList className="grid grid-cols-3 w-full">
-        <TabsTrigger value="pending">
-          للمراجعة ({pending.length})
-        </TabsTrigger>
-        <TabsTrigger value="approved">
-          مقبولة ({approved.length})
-        </TabsTrigger>
-        <TabsTrigger value="rejected">
-          مرفوضة ({rejected.length})
-        </TabsTrigger>
+        <TabsTrigger value="pending">للمراجعة ({pending.length})</TabsTrigger>
+        <TabsTrigger value="approved">مقبولة ({approved.length})</TabsTrigger>
+        <TabsTrigger value="rejected">مرفوضة ({rejected.length})</TabsTrigger>
       </TabsList>
 
       <TabsContent value="pending" className="mt-4 space-y-3">
@@ -334,28 +625,11 @@ function OrdersPanel({ token }: { token: string }) {
               busy={busyId === o.id}
               actions={
                 <>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => handleReject(o.id)}
-                    disabled={busyId === o.id}
-                  >
-                    <XCircle className="h-4 w-4 ml-1" />
-                    رفض
+                  <Button size="sm" variant="outline" onClick={() => handleReject(o.id)} disabled={busyId === o.id}>
+                    <XCircle className="h-4 w-4 ml-1" />رفض
                   </Button>
-                  <Button
-                    size="sm"
-                    onClick={() => handleApprove(o.id)}
-                    disabled={busyId === o.id}
-                  >
-                    {busyId === o.id ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <>
-                        <CheckCircle2 className="h-4 w-4 ml-1" />
-                        قبول
-                      </>
-                    )}
+                  <Button size="sm" onClick={() => handleApprove(o.id)} disabled={busyId === o.id}>
+                    {busyId === o.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <><CheckCircle2 className="h-4 w-4 ml-1" />قبول</>}
                   </Button>
                 </>
               }
@@ -365,33 +639,17 @@ function OrdersPanel({ token }: { token: string }) {
       </TabsContent>
 
       <TabsContent value="approved" className="mt-4 space-y-3">
-        {approved.length === 0 ? (
-          <EmptyState text="لا توجد طلبات مقبولة بعد." />
-        ) : (
-          approved.map((o) => <OrderRow key={o.id} order={o} />)
-        )}
+        {approved.length === 0 ? <EmptyState text="لا توجد طلبات مقبولة بعد." /> : approved.map((o) => <OrderRow key={o.id} order={o} />)}
       </TabsContent>
 
       <TabsContent value="rejected" className="mt-4 space-y-3">
-        {rejected.length === 0 ? (
-          <EmptyState text="لا توجد طلبات مرفوضة." />
-        ) : (
-          rejected.map((o) => <OrderRow key={o.id} order={o} />)
-        )}
+        {rejected.length === 0 ? <EmptyState text="لا توجد طلبات مرفوضة." /> : rejected.map((o) => <OrderRow key={o.id} order={o} />)}
       </TabsContent>
     </Tabs>
   );
 }
 
-function OrderRow({
-  order,
-  actions,
-  busy,
-}: {
-  order: Order;
-  actions?: React.ReactNode;
-  busy?: boolean;
-}) {
+function OrderRow({ order, actions, busy }: { order: Order; actions?: React.ReactNode; busy?: boolean }) {
   const statusBadge = {
     pending: <Badge className="bg-amber-500/15 text-amber-600 border border-amber-500/30 font-bold gap-1"><Clock3 className="h-3 w-3" />قيد المراجعة</Badge>,
     approved: <Badge className="bg-green-500/15 text-green-600 border border-green-500/30 font-bold gap-1"><CheckCircle2 className="h-3 w-3" />مقبول</Badge>,
@@ -408,29 +666,18 @@ function OrderRow({
         <div className="space-y-1">
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-base font-extrabold">{order.name}</span>
-            <a href={`tel:${order.phone}`} className="text-sm text-primary font-bold" dir="ltr">
-              {order.phone}
-            </a>
+            <a href={`tel:${order.phone}`} className="text-sm text-primary font-bold" dir="ltr">{order.phone}</a>
             {statusBadge}
           </div>
           <div className="text-xs text-muted-foreground">
             طلب #{order.id} · {formatDateTime(order.createdAt)} · {PAYMENT_LABELS[order.paymentMethod] ?? order.paymentMethod}
           </div>
           {order.details && (
-            <div className="text-sm text-muted-foreground border-t border-border pt-1 mt-1">
-              {order.details}
-            </div>
-          )}
-          {order.processedAt && (
-            <div className="text-xs text-muted-foreground">
-              تمت المراجعة: {formatDateTime(order.processedAt)}
-            </div>
+            <div className="text-sm text-muted-foreground border-t border-border pt-1 mt-1">{order.details}</div>
           )}
         </div>
         {actions && (
-          <div className={`flex flex-wrap gap-2 ${busy ? "opacity-70" : ""}`}>
-            {actions}
-          </div>
+          <div className={`flex flex-wrap gap-2 ${busy ? "opacity-70" : ""}`}>{actions}</div>
         )}
       </div>
     </motion.div>
@@ -438,7 +685,7 @@ function OrderRow({
 }
 
 // ─────────────────────────────────────────────
-// Bookings Panel (existing functionality)
+// Bookings Panel
 // ─────────────────────────────────────────────
 
 function BookingsPanel({ token, onLogout }: { token: string; onLogout: () => void }) {
@@ -508,15 +755,9 @@ function BookingsPanel({ token, onLogout }: { token: string; onLogout: () => voi
   return (
     <Tabs defaultValue="submitted">
       <TabsList className="grid grid-cols-3 w-full">
-        <TabsTrigger value="submitted" data-testid="tab-admin-submitted">
-          للمراجعة ({submitted.length})
-        </TabsTrigger>
-        <TabsTrigger value="paid" data-testid="tab-admin-paid">
-          مؤكدة ({paid.length})
-        </TabsTrigger>
-        <TabsTrigger value="pending" data-testid="tab-admin-pending">
-          لم يدفع ({pending.length})
-        </TabsTrigger>
+        <TabsTrigger value="submitted" data-testid="tab-admin-submitted">للمراجعة ({submitted.length})</TabsTrigger>
+        <TabsTrigger value="paid" data-testid="tab-admin-paid">مؤكدة ({paid.length})</TabsTrigger>
+        <TabsTrigger value="pending" data-testid="tab-admin-pending">لم يدفع ({pending.length})</TabsTrigger>
       </TabsList>
 
       <TabsContent value="submitted" className="mt-4 space-y-3">
@@ -531,8 +772,7 @@ function BookingsPanel({ token, onLogout }: { token: string; onLogout: () => voi
               actions={
                 <>
                   <Button size="sm" variant="outline" onClick={() => handleReject(b)} disabled={busyId === b.id} data-testid={`button-reject-${b.id}`}>
-                    <XCircle className="h-4 w-4 ml-1" />
-                    رفض
+                    <XCircle className="h-4 w-4 ml-1" />رفض
                   </Button>
                   <Button size="sm" onClick={() => handleConfirm(b)} disabled={busyId === b.id} data-testid={`button-confirm-${b.id}`}>
                     {busyId === b.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <><CheckCircle2 className="h-4 w-4 ml-1" />تأكيد + واتساب</>}

@@ -7,6 +7,8 @@ import pricingRouter from "./pricing";
 import adminRouter from "./admin";
 import webhookRouter from "./webhook";
 import ordersRouter from "./orders";
+import authRouter from "./auth";
+import offersRouter from "./offers";
 
 const router: IRouter = Router();
 
@@ -18,5 +20,7 @@ router.use(carsRouter);
 router.use(adminRouter);
 router.use(webhookRouter);
 router.use(ordersRouter);
+router.use(authRouter);
+router.use(offersRouter);
 
 export default router;

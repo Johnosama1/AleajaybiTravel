@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { WhatsAppButton } from "@/components/WhatsAppButton";
@@ -27,6 +27,20 @@ function getCarImage(car: Car): string {
   return CAR_IMAGES[car.imageUrl] ?? car.imageUrl;
 }
 
+interface DbOffer {
+  id: number;
+  title: string;
+  imageData: string;
+  carTransmission: string | null;
+  expiresAt: string | null;
+  createdAt: string;
+}
+
+const STATIC_OFFERS = [
+  { img: offerManualImage, transmission: "manual", alt: "عرض فيات 128" },
+  { img: offerAutoImage, transmission: "automatic", alt: "عرض نيسان صاني" },
+];
+
 export default function Home() {
   const {
     data: cars,
@@ -48,10 +62,21 @@ export default function Home() {
     query: { retry: 5, retryDelay: 2000 },
   });
   const [selectedCar, setSelectedCar] = useState<Car | null>(null);
+  const [dbOffers, setDbOffers] = useState<DbOffer[] | null>(null);
+
+  useEffect(() => {
+    fetch("/api/offers")
+      .then((r) => r.json())
+      .then((data) => setDbOffers(Array.isArray(data) ? data : []))
+      .catch(() => setDbOffers([]));
+  }, []);
 
   const scrollToCars = () => {
     document.getElementById("cars")?.scrollIntoView({ behavior: "smooth" });
   };
+
+  // Use DB offers if available, otherwise fall back to static offers
+  const useDbOffers = dbOffers !== null && dbOffers.length > 0;
 
   return (
     <div className="flex min-h-screen flex-col bg-background text-foreground font-sans">
@@ -247,36 +272,64 @@ export default function Home() {
                 عروضنا <span className="text-primary">الخاصة</span>
               </h2>
               <p className="text-muted-foreground text-sm sm:text-base">
-                عروض حصرية لشهر مايو — اضغط على العرض لحجز موعدك فوراً!
+                عروض حصرية — اضغط على العرض لحجز موعدك فوراً!
               </p>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 max-w-4xl mx-auto">
-              {[
-                { img: offerManualImage, transmission: "manual", alt: "عرض فيات 128" },
-                { img: offerAutoImage, transmission: "automatic", alt: "عرض نيسان صاني" },
-              ].map((offer, i) => {
-                const car = cars?.find((c) => c.transmission === offer.transmission) ?? null;
-                return (
-                  <motion.button
-                    key={offer.transmission}
-                    initial={{ opacity: 0, y: 16 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true }}
-                    transition={{ delay: i * 0.1 }}
-                    whileHover={{ scale: 1.01 }}
-                    whileTap={{ scale: 0.98 }}
-                    onClick={() => car && setSelectedCar(car)}
-                    disabled={!car}
-                    className="rounded-2xl overflow-hidden border border-border shadow-sm hover:shadow-xl hover:border-primary/50 transition-all cursor-pointer text-right w-full"
-                  >
-                    <img
-                      src={offer.img}
-                      alt={offer.alt}
-                      className="w-full h-auto object-cover block"
-                    />
-                  </motion.button>
-                );
-              })}
+              {useDbOffers
+                ? dbOffers.map((offer, i) => {
+                    const car = offer.carTransmission
+                      ? (cars?.find((c) => c.transmission === offer.carTransmission) ?? null)
+                      : null;
+                    return (
+                      <motion.button
+                        key={offer.id}
+                        initial={{ opacity: 0, y: 16 }}
+                        whileInView={{ opacity: 1, y: 0 }}
+                        viewport={{ once: true }}
+                        transition={{ delay: i * 0.1 }}
+                        whileHover={{ scale: 1.01 }}
+                        whileTap={{ scale: 0.98 }}
+                        onClick={() => car && setSelectedCar(car)}
+                        disabled={!car}
+                        className="rounded-2xl overflow-hidden border border-border shadow-sm hover:shadow-xl hover:border-primary/50 transition-all cursor-pointer text-right w-full"
+                      >
+                        <img
+                          src={offer.imageData}
+                          alt={offer.title || "عرض خاص"}
+                          className="w-full h-auto object-cover block"
+                        />
+                        {offer.title && (
+                          <div className="p-3 bg-card text-center font-bold text-sm text-primary">
+                            {offer.title}
+                          </div>
+                        )}
+                      </motion.button>
+                    );
+                  })
+                : STATIC_OFFERS.map((offer, i) => {
+                    const car = cars?.find((c) => c.transmission === offer.transmission) ?? null;
+                    return (
+                      <motion.button
+                        key={offer.transmission}
+                        initial={{ opacity: 0, y: 16 }}
+                        whileInView={{ opacity: 1, y: 0 }}
+                        viewport={{ once: true }}
+                        transition={{ delay: i * 0.1 }}
+                        whileHover={{ scale: 1.01 }}
+                        whileTap={{ scale: 0.98 }}
+                        onClick={() => car && setSelectedCar(car)}
+                        disabled={!car}
+                        className="rounded-2xl overflow-hidden border border-border shadow-sm hover:shadow-xl hover:border-primary/50 transition-all cursor-pointer text-right w-full"
+                      >
+                        <img
+                          src={offer.img}
+                          alt={offer.alt}
+                          className="w-full h-auto object-cover block"
+                        />
+                      </motion.button>
+                    );
+                  })}
             </div>
           </div>
         </section>

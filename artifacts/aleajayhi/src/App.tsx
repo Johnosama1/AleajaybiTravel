@@ -10,6 +10,7 @@ import BookingPayment from "@/pages/BookingPayment";
 import Admin from "@/pages/Admin";
 import Orders from "@/pages/Orders";
 import OrderStatus from "@/pages/OrderStatus";
+import MyBookings from "@/pages/MyBookings";
 
 const queryClient = new QueryClient();
 
@@ -23,6 +24,7 @@ function Router() {
       <Route path="/admin" component={Admin} />
       <Route path="/orders" component={Orders} />
       <Route path="/orders/:id" component={OrderStatus} />
+      <Route path="/my-bookings" component={MyBookings} />
       <Route component={NotFound} />
     </Switch>
   );
