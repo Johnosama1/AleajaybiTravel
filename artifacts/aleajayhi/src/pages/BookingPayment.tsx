@@ -27,6 +27,7 @@ import {
   type Booking,
   type SubmitPaymentRequest,
 } from "@workspace/api-client-react";
+import { useQueryClient } from "@tanstack/react-query";
 import { ARABIC_DAYS, formatMinutes, formatArabicDate } from "@/lib/date";
 import { useToast } from "@/hooks/use-toast";
 
@@ -59,6 +60,7 @@ export default function BookingPayment() {
   });
 
   const submitPaymentMutation = useSubmitBookingPayment();
+  const queryClient = useQueryClient();
 
   const [method, setMethod] = useState<Method>("vodafone_cash");
   const [reference, setReference] = useState("");
@@ -135,7 +137,7 @@ export default function BookingPayment() {
       return;
     }
     try {
-      await submitPaymentMutation.mutateAsync({
+      const updatedBooking = await submitPaymentMutation.mutateAsync({
         id,
         data: {
           method,
@@ -143,6 +145,7 @@ export default function BookingPayment() {
           proofImage: proofImage ?? undefined,
         },
       });
+      queryClient.setQueryData(getGetBookingQueryKey(id), updatedBooking);
       toast({
         title: "✅ تم إرسال بيانات الدفع",
         description: "سيتم مراجعة الدفع والتواصل معك قريباً.",
