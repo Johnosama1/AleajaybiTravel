@@ -45,6 +45,14 @@ app.use("/api", (_req, res, next) => {
 });
 app.use("/api", router);
 
+const panelFile = path.resolve(__dirname, "public", "panel.html");
+if (fs.existsSync(panelFile)) {
+  app.get("/panel", (_req, res) => {
+    res.setHeader("Cache-Control", "no-store");
+    res.sendFile(panelFile);
+  });
+}
+
 const staticDir = path.resolve(__dirname, "..", "..", "aleajayhi", "dist", "public");
 if (fs.existsSync(staticDir)) {
   app.use(
